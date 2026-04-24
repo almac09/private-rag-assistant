@@ -1,0 +1,226 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "01. UV Create Virtual Environment",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+            "args": ["venv", ".venv"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "02. PS Activate Virtual Environment",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": ["-ExecutionPolicy", "Bypass", "-Command", ".\\.venv\\Scripts\\Activate.ps1"],
+            "windows": {
+                "command": "powershell.exe",
+                "args": ["-ExecutionPolicy", "Bypass", "-Command", ".\\.venv\\Scripts\\Activate.ps1"]
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": false,
+                "close": false
+            },
+            "isBackground": false
+        },
+        {
+            "label": "03. UV Install Dependencies",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+            "args": ["pip", "install", "-r", "pyproject.toml"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "dependsOn": [
+                "Update pip"
+            ]
+        },
+        {
+            "label": "04. UV cache clean",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+            "args": ["cache", "clean"],
+            "dependsOn": [
+                "02. Activate Virtual Environment"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "05. UV sync",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+            "args": ["sync"],
+            "dependsOn": [
+                "02. Activate Virtual Environment"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "06. PS Delete Virtual Environment",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": ["-ExecutionPolicy", "Bypass", "-Command", "Remove-Item -Recurse -Force .\\.venv"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "07. UV pip list",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
+            "args": ["pip", "list"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "08. Black Format Codebase",
+            "type": "process",
+            "command": ".\\.venv\\Scripts\\black.exe",
+            "args": [
+                ".",
+                "--exclude",
+                ".venv"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "09. Sphinx-build Docs (HTML)",
+            "type": "process",
+            "command": ".venv\\Scripts\\sphinx-build.exe",
+            "args": [
+                "-b", "html",   // This specifies the builder (html in this case)
+                "docs\\_source",// The source directory containing your reStructuredText files (usually `source`)
+                "docs\\_build"  // The directory where the output will be placed (usually `build`)
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "10. Sphinx-build Docs (docx)",
+            "type": "process",
+            "command": ".venv\\Scripts\\sphinx-build.exe",
+            "args": [
+                "-b", "docx",   // This specifies the builder (docx in this case)
+                "docs\\_source",// The source directory containing your reStructuredText files (usually `source`)
+                "docs\\_build"  // The directory where the output will be placed (usually `build`)
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "11. Install R via winget",
+            "type": "process",
+            "command": "winget",
+            "args": [
+            "install",
+            "--id=RProject.R",
+            "-e"
+            ],
+            "group": {
+            "kind": "build",
+            "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+            "reveal": "always",
+            "focus": true,
+            "panel": "shared",
+            "clear": false
+            }
+        },
+        {
+            "label": "12. Install Anaconda via winget",
+            "type": "process",
+            "command": "winget",
+            "args": [
+            "install",
+            "--id=Anaconda.Anaconda3",
+            "-e"
+            ],
+            "group": {
+            "kind": "build",
+            "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+            "reveal": "always",
+            "focus": true,
+            "panel": "shared",
+            "clear": false
+            }
+        }
+    ]
+}

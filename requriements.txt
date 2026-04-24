@@ -1,0 +1,26 @@
+# Core RAG stack
+langchain
+langchain-community
+langchain-chroma
+chromadb
+
+# Local model support (Ollama)
+langchain-ollama
+
+# LLM provider fallbacks
+openai
+anthropic
+google-generativeai
+
+# Embeddings
+sentence-transformers
+
+# Document handling
+pypdf
+requests
+
+# Evaluation
+ragas
+
+# Utilities
+python-dotenv
