@@ -301,6 +301,63 @@
                 "panel": "shared",
                 "clear": false
             }
+<<<<<<< HEAD
+=======
+        },
+        {
+            "label": "16. Render Quarto & Open Index",
+            "type": "shell",
+            "command": "quarto",
+            "args": [
+                "render",
+                "quarto"
+            ],
+            "windows": {
+                "command": "quarto.exe",
+                "args": [
+                    "render",
+                    "quarto"
+                ]
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            },
+            "postDebugTask": "Open Quarto Index"
+        },
+        {
+            "label": "Open Quarto Index",
+            "type": "shell",
+            "command": "Start-Process",
+            "args": [
+                "${workspaceFolder}/quarto/_site/index.html"
+            ],
+            "windows": {
+                "command": "powershell.exe",
+                "args": [
+                    "-Command",
+                    "Start-Process '${workspaceFolder}/quarto/_site/index.html'"
+                ]
+            },
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "clear": false
+            }
+>>>>>>> copilot/worktree-2026-05-04T15-55-14
         }
     ]
 }
