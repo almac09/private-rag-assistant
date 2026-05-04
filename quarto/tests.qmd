@@ -8,78 +8,150 @@ format:
 
 ## Overview
 
-This page displays the results of environment and setup validation tests for the RAG assistant project.
+This page renders the live results of the last environment and setup validation test run.
+The data is loaded from `test-results.json` at render time — re-render after running tests
+to see updated results.
 
 Run tests with:
+
 ```powershell
 # From VS Code task: 14. Pytest - Setup Tests
-# Or from command line:
-pytest tests/test_setup.py -v --json-report --json-report-file=quarto/test-results.json
+# Or from the command line (run from repo root):
+pytest tests/test_setup.py -v --json-report --json-report-file=test-results.json
 ```
 
-## Test Categories
+---
 
-### 1. Dependencies
+```{python}
+#| echo: false
+import json
+import math
+from pathlib import Path
+from IPython.display import HTML, display
 
-Verifies that all required Python packages are installed.
+json_path = Path("../test-results.json")
 
-- ✅ LangChain
-- ✅ LangChain Ollama integration
-- ✅ ChromaDB
-- ✅ RAG module (ingest, query, evaluate)
+if not json_path.exists():
+    display(HTML(
+        "<div style='padding:1em;background:#fff3cd;border:1px solid #ffc107;border-radius:4px'>"
+        "<strong>No results file found.</strong> Run the pytest command above first.</div>"
+    ))
+else:
+    data = json.loads(json_path.read_text())
+    tests = data.get("tests", [])
+    summary = data.get("summary", {})
+    duration = data.get("duration", 0)
+    exitcode = data.get("exitcode", -1)
 
-### 2. Ollama Service
+    if not tests:
+        display(HTML(
+            "<div style='padding:1em;background:#fff3cd;border:1px solid #ffc107;border-radius:4px'>"
+            f"<strong>No tests were collected</strong> (exit code {exitcode}). "
+            "Check that <code>tests/test_setup.py</code> exists and pytest is run from the repo root."
+            "</div>"
+        ))
+    else:
+        # Build summary banner
+        total   = summary.get("total", len(tests))
+        passed  = summary.get("passed", 0)
+        failed  = summary.get("failed", 0)
+        skipped = summary.get("skipped", 0)
+        colour  = "#d4edda" if failed == 0 else "#f8d7da"
+        border  = "#28a745" if failed == 0 else "#dc3545"
 
-Checks that Ollama service is running and accessible.
+        banner = (
+            f"<div style='padding:1em;background:{colour};border-left:4px solid {border};"
+            f"border-radius:4px;margin-bottom:1em'>"
+            f"<strong>{'All tests passed' if failed == 0 else f'{failed} test(s) failed'}</strong>"
+            f" &nbsp;|&nbsp; {passed} passed &nbsp; {failed} failed &nbsp; {skipped} skipped"
+            f" &nbsp;|&nbsp; {duration:.2f}s"
+            f"</div>"
+        )
 
-- Service running on `localhost:11434`
-- At least one model available
+        # Build results table
+        ICONS = {"passed": "✅", "failed": "❌", "skipped": "⚠️", "error": "💥"}
 
-**Troubleshooting:**
+        rows = []
+        for t in tests:
+            node     = t.get("nodeid", "")
+            outcome  = t.get("outcome", "unknown")
+            dur      = t.get("duration") or t.get("call", {}).get("duration", 0) or 0
+            icon     = ICONS.get(outcome, "❓")
+
+            # Extract class and test name from nodeid
+            parts = node.split("::")
+            class_name = parts[1] if len(parts) > 1 else ""
+            test_name  = parts[2] if len(parts) > 2 else parts[-1]
+            friendly   = test_name.replace("test_", "").replace("_", " ").capitalize()
+
+            # Error message for failures
+            longrepr = ""
+            if outcome == "failed":
+                call = t.get("call", {})
+                longrepr = call.get("longrepr", "")
+                if longrepr:
+                    longrepr = f"<br><code style='font-size:0.8em;color:#dc3545'>{longrepr[:300].replace(chr(10), '<br>')}</code>"
+
+            rows.append(
+                f"<tr>"
+                f"<td>{icon} {outcome.upper()}</td>"
+                f"<td>{class_name}</td>"
+                f"<td>{friendly}{longrepr}</td>"
+                f"<td style='text-align:right'>{dur:.3f}s</td>"
+                f"</tr>"
+            )
+
+        table = (
+            "<table style='width:100%;border-collapse:collapse'>"
+            "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+            "<th style='text-align:left;padding:6px'>Status</th>"
+            "<th style='text-align:left;padding:6px'>Class</th>"
+            "<th style='text-align:left;padding:6px'>Test</th>"
+            "<th style='text-align:right;padding:6px'>Duration</th>"
+            "</tr></thead><tbody>"
+            + "".join(rows)
+            + "</tbody></table>"
+        )
+
+        display(HTML(banner + table))
+```
+
+---
+
+## Test categories
+
+The test suite in `tests/test_setup.py` covers five areas:
+
+| Class | What it checks |
+|-------|----------------|
+| `TestDependencies` | LangChain, ChromaDB, RAG module importable |
+| `TestOllamaService` | Ollama running on `localhost:11434` |
+| `TestOllamaModels` | Default model (`OLLAMA_MODEL` env var) downloaded |
+| `TestLLMProviders` | Ollama required; OpenAI / Anthropic / Gemini optional |
+| `TestEnvironment` | Python ≥ 3.11, `.env` exists, required directories present |
+
+## Troubleshooting
+
+**Ollama not running**
+
 ```powershell
-ollama serve  # Start in separate terminal
+ollama serve   # start in a separate terminal
 ```
 
-### 3. Available Models
-
-Validates that required LLM models are downloaded.
+**Model missing**
 
 ```powershell
-ollama list                  # See installed models
-ollama pull llama3.2:1b      # Install specific model
+ollama list                  # see installed models
+ollama pull llama3.2:1b      # download the default
 ```
 
-**Current default:** `llama3.2:1b` (configured in `.env`)
+**Import errors** — re-sync dependencies:
 
-### 4. LLM Providers
+```powershell
+uv sync
+```
 
-Tests that LLM providers can be instantiated.
+## Next steps
 
-- **Ollama** (required) — local, no API key needed
-- **OpenAI** (optional) — requires `OPENAI_API_KEY` in `.env`
-- **Anthropic** (optional) — requires `ANTHROPIC_API_KEY` in `.env`
-- **Gemini** (optional) — requires `GOOGLE_API_KEY` in `.env`
-
-### 5. Environment Configuration
-
-Checks Python version, project structure, and configuration.
-
-- Python ≥ 3.11
-- `.env` file exists
-- Required directories: `rag/`, `docs/`, `notebooks/`, `tests/`
-
-## Quick Reference
-
-| Check | Status | Action |
-|-------|--------|--------|
-| Python 3.11+ | ✅ | — |
-| Dependencies installed | ✅ | Run `uv sync` if missing |
-| Ollama service running | ✅ | Run `ollama serve` if missing |
-| Models downloaded | ⚠️ | Run `ollama pull llama3.2:1b` if needed |
-| API keys (optional) | — | Add to `.env` only if using cloud providers |
-
-## Next Steps
-
-Once all tests pass, you're ready to start **Phase 1: Document Ingestion**.
-
-See the [Project Report](report.qmd) for detailed next steps.
+Once all tests pass, proceed to **Phase 1: Document Ingestion**.
+See the [Project Report](report.qmd) for details.

@@ -1,0 +1,197 @@
+---
+title: "GitHub Contribution Workflow"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+## Overview
+
+This page documents the GitHub issue-and-PR workflow used during this project. It serves as a personal
+reference for contributing to a repository — either your own or someone else's — following open-source
+conventions.
+
+The workflow modelled here is **issue → branch → fix → PR → close**. Every change is traceable back
+to a logged reason.
+
+---
+
+## Step 1 — Find or raise an issue
+
+Before touching code, the problem is recorded as a **GitHub Issue**. Issues are the paper trail:
+they explain *why* a change was made and link the fix back to the motivation.
+
+```powershell
+# Create an issue from the command line using the GitHub CLI (gh)
+gh issue create \
+  --title "Short, specific description of the problem" \
+  --body "$(cat <<'EOF'
+## Description
+What is broken and where.
+
+## Expected behaviour
+What should happen.
+
+## Actual behaviour
+What actually happens, including error output or screenshots.
+
+## Steps to reproduce
+Numbered list so someone else can confirm the bug.
+
+## Suggested fix
+Optional — your best guess at the solution.
+
+## Acceptance criteria
+- [ ] Checkbox list of what "done" looks like
+EOF
+)"
+```
+
+**In a project you don't own**, you'd browse to the repo on GitHub, click **Issues → New issue**, and
+fill in the same information. The maintainer triages it, and if they accept it you get assigned or
+invited to submit a PR.
+
+---
+
+## Step 2 — Create a branch
+
+Never commit fixes directly to `main`. Create a named branch that references the issue.
+
+```powershell
+# Convention: type/short-description
+# Common prefixes: fix/, feat/, docs/, refactor/, chore/
+git checkout -b fix/tests-qmd-dynamic-rendering
+```
+
+Naming conventions matter in collaborative repos — maintainers scan branch names to understand intent
+before reading code.
+
+**In someone else's repo** you would first **fork** the repository (top-right button on GitHub), clone
+*your fork*, then create the branch there:
+
+```powershell
+# Fork happens on GitHub, then:
+git clone https://github.com/YOUR-USERNAME/their-repo.git
+cd their-repo
+git remote add upstream https://github.com/ORIGINAL-OWNER/their-repo.git
+git checkout -b fix/short-description
+```
+
+---
+
+## Step 3 — Make the fix
+
+Edit files, run tests, confirm the fix works. Keep commits small and focused.
+
+```powershell
+# Stage specific files (never git add -A blindly)
+git add quarto/tests.qmd
+
+# Write a commit message that explains WHY, not just WHAT
+git commit -m "Load test-results.json dynamically in tests.qmd
+
+Previously the page was static markdown with hardcoded checkmarks.
+Now a Python code cell loads the JSON on every render so results
+reflect the actual last test run.
+
+Refs #1, #2"
+```
+
+Good commit messages follow the pattern:
+
+```
+Short imperative summary (≤72 chars)
+
+Blank line, then a paragraph explaining the motivation — what was
+wrong, why this approach was chosen, any tradeoffs.
+
+Refs #N  ← links the commit to the issue in GitHub's UI
+```
+
+---
+
+## Step 4 — Push and open a Pull Request
+
+```powershell
+# Push branch to remote (origin = your fork or your own repo)
+git push -u origin fix/tests-qmd-dynamic-rendering
+
+# Open a PR from the command line
+gh pr create \
+  --title "Fix: render test results dynamically from JSON" \
+  --body "$(cat <<'EOF'
+## Summary
+- Replace hardcoded markdown in `tests.qmd` with Python code cells that load `test-results.json`
+- Fix pytest output path so the JSON lands where the `.qmd` expects it
+
+## Test plan
+- [ ] Run `pytest tests/test_setup.py --json-report --json-report-file=test-results.json`
+- [ ] Render `quarto/tests.qmd` and confirm results table appears
+- [ ] Verify failed/skipped tests show error messages
+
+Closes #1
+Closes #2
+EOF
+)"
+```
+
+`Closes #N` is a **magic keyword** — when the PR is merged, GitHub automatically closes the linked
+issue. Other valid keywords: `Fixes #N`, `Resolves #N`.
+
+**In someone else's repo**, you'd open the PR *from your fork's branch* targeting the upstream
+`main`. GitHub shows a "Compare & pull request" banner automatically after you push.
+
+---
+
+## Step 5 — Review and merge
+
+In a collaborative project a maintainer reviews the PR, leaves comments, and requests changes if
+needed. You push additional commits to the same branch — they appear in the PR automatically.
+
+```powershell
+# If the reviewer requests a change:
+# 1. Make the edit
+git add quarto/tests.qmd
+git commit -m "Address review: handle missing test-results.json gracefully"
+git push   # same branch, PR updates automatically
+```
+
+Once approved:
+
+- The maintainer clicks **Squash and merge** (or Merge, depending on repo policy)
+- The linked issues close automatically
+- The branch can be deleted
+
+```powershell
+# Clean up local branch after merge
+git checkout main
+git pull
+git branch -d fix/tests-qmd-dynamic-rendering
+```
+
+---
+
+## Quick-reference command card
+
+| Action | Command |
+|--------|---------|
+| Create issue | `gh issue create --title "..." --body "..."` |
+| List open issues | `gh issue list` |
+| View issue | `gh issue view 3` |
+| Create branch | `git checkout -b fix/description` |
+| Push branch | `git push -u origin fix/description` |
+| Open PR | `gh pr create --title "..." --body "..."` |
+| View PR status | `gh pr status` |
+| List PRs | `gh pr list` |
+| Merge PR | `gh pr merge --squash` |
+| Close issue manually | `gh issue close 3` |
+
+---
+
+## This project's issues raised via this workflow
+
+| Issue | Title | Status |
+|-------|-------|--------|
+| [#18](https://github.com/almac09/private-rag-assistant/issues/18) | tests.qmd renders static markdown instead of live results | Closed via PR |
+| [#19](https://github.com/almac09/private-rag-assistant/issues/19) | test-results.json written to wrong path | Closed via PR |

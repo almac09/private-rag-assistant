@@ -15,6 +15,10 @@ website:
         text: Evaluation Results
       - href: presentation.qmd
         text: Presentation
+      - href: tests.qmd
+        text: Test Results
+      - href: github_workflow.qmd
+        text: GitHub Workflow
 
 format:
   html:
