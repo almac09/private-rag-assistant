@@ -15,13 +15,30 @@ $milestones = @(
 )
 
 foreach ($m in $milestones) {
-    gh api repos/$repo/milestones --method POST `
-        --field title=$($m.title) `
-        --field description=$($m.description) | Out-Null
+    $json = @{
+        title = $m.title
+        description = $m.description
+    } | ConvertTo-Json
+
+    gh api repos/$repo/milestones -H "Accept: application/vnd.github+json" --input - <<< $json 2>&1 | Out-Null
     Write-Host "  + $($m.title)"
 }
 
+Start-Sleep -Seconds 2
+
 Write-Host "`nCreating issues..." -ForegroundColor Cyan
+
+# Get milestone number map
+$milestoneMap = @{}
+$milestonesData = gh api repos/$repo/milestones --paginate -q '.[] | {title, number}'
+$milestonesData | ForEach-Object {
+    $parts = $_ -split '\s+'
+    if ($parts.Count -ge 2) {
+        $num = $parts[-1]
+        $title = $parts[0..($parts.Count-2)] -join ' '
+        $milestoneMap[$title] = [int]$num
+    }
+}
 
 $issues = @(
     # Phase 1
@@ -32,9 +49,9 @@ $issues = @(
 
     # Phase 2
     @{ title = "Query: Build retrieval chain (top-k similarity search)"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
-    @{ title = "Query: Wire generation prompt — answer from context only"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
+    @{ title = "Query: Wire generation prompt - answer from context only"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
     @{ title = "Query: Return source chunk citations with each answer"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
-    @{ title = "Query: Notebook 02 — baseline (no docs) vs single-doc comparison"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
+    @{ title = "Query: Notebook 02 - baseline (no docs) vs single-doc comparison"; milestone = "Phase 2: RAG query pipeline"; labels = "enhancement" },
 
     # Phase 3
     @{ title = "Eval: Write gold-standard test_questions.json (20 questions)"; milestone = "Phase 3: Evaluation harness"; labels = "enhancement" },
@@ -52,19 +69,18 @@ $issues = @(
     @{ title = "Docs: Render Quarto presentation from quarto/ directory"; milestone = "Phase 1: Document ingestion"; labels = "documentation" }
 )
 
-# Get milestone number map
-$milestoneMap = @{}
-gh api repos/$repo/milestones --paginate | ConvertFrom-Json | ForEach-Object {
-    $milestoneMap[$_.title] = $_.number
-}
-
 foreach ($issue in $issues) {
     $milestoneNum = $milestoneMap[$issue.milestone]
-    gh api repos/$repo/issues --method POST `
-        --field title=$($issue.title) `
-        --field milestone=$milestoneNum `
-        --field "labels[]=$($issue.labels)" | Out-Null
-    Write-Host "  + $($issue.title)"
+    if ($milestoneNum) {
+        $json = @{
+            title = $issue.title
+            milestone = $milestoneNum
+            labels = @($issue.labels)
+        } | ConvertTo-Json
+
+        gh api repos/$repo/issues -H "Accept: application/vnd.github+json" --input - <<< $json 2>&1 | Out-Null
+        Write-Host "  + $($issue.title)"
+    }
 }
 
 Write-Host "`nDone! Visit: https://github.com/$repo/issues" -ForegroundColor Green
