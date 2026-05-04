@@ -17,6 +17,8 @@ where it works, where it fails, and how to evaluate and explain it honestly.
 - [Project Report](report.qmd) — full capstone report
 - [Evaluation Results](evaluation.qmd) — RAGAS scores per phase
 - [Presentation](presentation.qmd) — slide deck summary
+- [Tests](tests.qmd) — test suite and results
+
 
 ## Project phases
 

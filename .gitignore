@@ -213,3 +213,4 @@ docs/pdfs/
 # ChromaDB vector store (rebuilt locally from source PDFs)
 chroma_db/
 .chroma/
+_quarto_site/*

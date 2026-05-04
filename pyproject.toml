@@ -21,8 +21,10 @@ dependencies = [
     "python-dotenv>=1.0",
     "jupyter>=1.0",
     "pytest>=8.0",
+    "pytest-json-report>=1.5",
     "black>=24.0",
     "ruff>=0.4",
+    "sphinx",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -301,12 +301,10 @@
                 "panel": "shared",
                 "clear": false
             }
-<<<<<<< HEAD
-=======
         },
         {
             "label": "16. Render Quarto & Open Index",
-            "type": "shell",
+            "type": "process",
             "command": "quarto",
             "args": [
                 "render",
@@ -334,7 +332,7 @@
         },
         {
             "label": "Open Quarto Index",
-            "type": "shell",
+            "type": "process",
             "command": "Start-Process",
             "args": [
                 "${workspaceFolder}/quarto/_site/index.html"
@@ -343,7 +341,7 @@
                 "command": "powershell.exe",
                 "args": [
                     "-Command",
-                    "Start-Process '${workspaceFolder}/quarto/_site/index.html'"
+                    "Start-Process '${workspaceFolder}/_quarto_site/index.html'"
                 ]
             },
             "group": {
@@ -357,7 +355,6 @@
                 "panel": "shared",
                 "clear": false
             }
->>>>>>> copilot/worktree-2026-05-04T15-55-14
         }
     ]
 }

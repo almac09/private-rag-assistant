@@ -22,3 +22,6 @@ uv sync
 
 Write-Host "Setup complete!" -ForegroundColor Green
 Write-Host "Run 'python 00_hello_world.py' to test LLM providers."
+
+# Ollama pull command for specific model version
+ollama pull llama3.2:1b
