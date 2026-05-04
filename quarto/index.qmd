@@ -1,0 +1,30 @@
+---
+title: "Building a RAG System I Can Explain"
+subtitle: "TU Dublin CPD Certificate in Foundations of AI — Capstone Project"
+author: "Alan McDonagh (A00052777)"
+date: today
+---
+
+## About this project
+
+A local Retrieval-Augmented Generation (RAG) pipeline built to understand how RAG actually behaves —
+where it works, where it fails, and how to evaluate and explain it honestly.
+
+**Stack:** LangChain · ChromaDB · Ollama · RAGAS · Sphinx · Quarto
+
+## Navigation
+
+- [Project Report](report.qmd) — full capstone report
+- [Evaluation Results](evaluation.qmd) — RAGAS scores per phase
+- [Presentation](presentation.qmd) — slide deck summary
+
+## Project phases
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| 0 | Repo setup + hello world | ✅ Complete |
+| 1 | Document ingestion | ⬜ Not started |
+| 2 | RAG query pipeline | ⬜ Not started |
+| 3 | Evaluation harness | ⬜ Not started |
+| 4 | Feedback + confidence | ⬜ Not started |
+| 5 | Enterprise deployment plan | ⬜ Not started |

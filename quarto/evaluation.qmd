@@ -1,0 +1,9 @@
+---
+title: "Evaluation Results"
+date: today
+---
+
+Results are populated here as each evaluation phase completes.
+See `tests/evaluation_results.json` for the raw data.
+
+{{< include ../docs/_source/evaluation.md >}}

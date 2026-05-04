@@ -1,0 +1,9 @@
+---
+title: "Project Report"
+subtitle: "Building a RAG System I Can Explain"
+author: "Alan McDonagh (A00052777)"
+date: today
+number-sections: true
+---
+
+{{< include ../docs/_source/report.md >}}

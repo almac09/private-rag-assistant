@@ -1,0 +1,26 @@
+project:
+  type: website
+  title: "Building a RAG System I Can Explain"
+  output-dir: ../_quarto_site
+
+website:
+  title: "RAG Assistant — Capstone"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: report.qmd
+        text: Project Report
+      - href: evaluation.qmd
+        text: Evaluation Results
+      - href: presentation.qmd
+        text: Presentation
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true

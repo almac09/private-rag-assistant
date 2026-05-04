@@ -1,0 +1,76 @@
+---
+title: "Building a RAG System I Can Explain"
+subtitle: "TU Dublin CPD Foundations of AI — Capstone"
+author: "Alan McDonagh"
+date: today
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    toc: false
+    incremental: false
+    footer: "Alan McDonagh · TU Dublin CPD · 2026"
+---
+
+## The problem
+
+- Solvency II guidance runs to thousands of pages
+- Existing search tools were slower than just reading
+- A colleague piloted RAG — useful, but:
+  - No way to log or replay bad answers
+  - No trust signal for the user
+  - No ability to explain failures to stakeholders
+
+## The goal
+
+> Build something small enough to **explain and evaluate honestly**.
+
+Two goals, equal weight:
+
+1. Understand how a RAG pipeline actually behaves
+2. Get better at explaining it to non-technical audiences
+
+## The stack
+
+| Layer | Tool |
+|-------|------|
+| RAG framework | LangChain |
+| Vector store | ChromaDB (local) |
+| LLM | Ollama (air-gapped) |
+| Evaluation | RAGAS + pytest |
+| Docs | Sphinx + Quarto |
+
+Nothing leaves the laptop.
+
+## The approach — 4 phases
+
+1. **Baseline** — no documents; watch it fail cleanly
+2. **Single document** — one PDF; see what changes
+3. **Expanded KB** — all course PDFs; watch for new problems
+4. **Evaluation** — RAGAS scores + honest write-up
+
+## Evaluation design
+
+Test questions drawn from source documents → **known answers**.
+
+Check two things per question:
+
+- Did retrieval pull back the **right chunks**?
+- Is the answer **grounded** in what was retrieved?
+
+Wrapped in **pytest** so regressions show up like broken unit tests.
+
+## Key ethical points
+
+- **Accuracy risk:** confident-sounding wrong answers in a regulated setting
+- **Transparency:** users must know what the system is and isn't doing
+- **KB completeness:** missing docs = silent partial answers
+
+None of these are reasons not to proceed — they shape how results are presented.
+
+## What's next
+
+- Complete Phases 1–4
+- Record and replay failure cases (the missing piece from the original pilot)
+- Surface a confidence signal to the user
+- Write a plain-English one-pager for non-technical stakeholders
