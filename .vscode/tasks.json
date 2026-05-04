@@ -2,6 +2,23 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "00. Run Setup Script",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/setup.ps1"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
             "label": "01. UV Create Virtual Environment",
             "type": "process",
             "command": "${env:USERPROFILE}\\.local\\bin\\uv.exe",
@@ -220,6 +237,69 @@
             "focus": true,
             "panel": "shared",
             "clear": false
+            }
+        },
+        {
+            "label": "13. Install Ollama via winget",
+            "type": "process",
+            "command": "winget",
+            "args": [
+                "install",
+                "--id=Ollama.Ollama",
+                "-e"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "14. Pytest - Setup Tests",
+            "type": "process",
+            "command": ".venv\\Scripts\\pytest.exe",
+            "args": [
+                "tests/test_setup.py",
+                "-v",
+                "--tb=short"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": ["$pytest"],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
+            "label": "15. Pytest - All Tests",
+            "type": "process",
+            "command": ".venv\\Scripts\\pytest.exe",
+            "args": [
+                "tests/",
+                "-v",
+                "--tb=short"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "problemMatcher": ["$pytest"],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
             }
         }
     ]
