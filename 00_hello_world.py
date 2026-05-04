@@ -27,14 +27,14 @@ results = {}
 
 # ── 1. OLLAMA (local, always tried first) ──────────────────────────────────
 def test_ollama():
-    model = os.getenv("OLLAMA_MODEL", "llama3")
+    model = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
     try:
         from langchain_ollama import OllamaLLM
         llm = OllamaLLM(model=model)
         response = llm.invoke(PROMPT)
         return response.strip()
     except Exception as e:
-        return f"SKIPPED — {e}"
+        return f"FAILED — {e}"
 
 
 # ── 2. OPENAI ──────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ def test_openai():
         response = llm.invoke(PROMPT)
         return response.content.strip()
     except Exception as e:
-        return f"SKIPPED — {e}"
+        return f"FAILED — {e}"
 
 
 # ── 3. ANTHROPIC ───────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ def test_anthropic():
         response = llm.invoke(PROMPT)
         return response.content.strip()
     except Exception as e:
-        return f"SKIPPED — {e}"
+        return f"FAILED — {e}"
 
 
 # ── 4. GEMINI ──────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ def test_gemini():
         response = llm.invoke(PROMPT)
         return response.content.strip()
     except Exception as e:
-        return f"SKIPPED — {e}"
+        return f"FAILED — {e}"
 
 
 # ── RUN ALL TESTS ──────────────────────────────────────────────────────────

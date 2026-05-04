@@ -1,0 +1,85 @@
+---
+title: "Setup & Environment Tests"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+## Overview
+
+This page displays the results of environment and setup validation tests for the RAG assistant project.
+
+Run tests with:
+```powershell
+# From VS Code task: 14. Pytest - Setup Tests
+# Or from command line:
+pytest tests/test_setup.py -v --json-report --json-report-file=quarto/test-results.json
+```
+
+## Test Categories
+
+### 1. Dependencies
+
+Verifies that all required Python packages are installed.
+
+- ✅ LangChain
+- ✅ LangChain Ollama integration
+- ✅ ChromaDB
+- ✅ RAG module (ingest, query, evaluate)
+
+### 2. Ollama Service
+
+Checks that Ollama service is running and accessible.
+
+- Service running on `localhost:11434`
+- At least one model available
+
+**Troubleshooting:**
+```powershell
+ollama serve  # Start in separate terminal
+```
+
+### 3. Available Models
+
+Validates that required LLM models are downloaded.
+
+```powershell
+ollama list                  # See installed models
+ollama pull llama3.2:1b      # Install specific model
+```
+
+**Current default:** `llama3.2:1b` (configured in `.env`)
+
+### 4. LLM Providers
+
+Tests that LLM providers can be instantiated.
+
+- **Ollama** (required) — local, no API key needed
+- **OpenAI** (optional) — requires `OPENAI_API_KEY` in `.env`
+- **Anthropic** (optional) — requires `ANTHROPIC_API_KEY` in `.env`
+- **Gemini** (optional) — requires `GOOGLE_API_KEY` in `.env`
+
+### 5. Environment Configuration
+
+Checks Python version, project structure, and configuration.
+
+- Python ≥ 3.11
+- `.env` file exists
+- Required directories: `rag/`, `docs/`, `notebooks/`, `tests/`
+
+## Quick Reference
+
+| Check | Status | Action |
+|-------|--------|--------|
+| Python 3.11+ | ✅ | — |
+| Dependencies installed | ✅ | Run `uv sync` if missing |
+| Ollama service running | ✅ | Run `ollama serve` if missing |
+| Models downloaded | ⚠️ | Run `ollama pull llama3.2:1b` if needed |
+| API keys (optional) | — | Add to `.env` only if using cloud providers |
+
+## Next Steps
+
+Once all tests pass, you're ready to start **Phase 1: Document Ingestion**.
+
+See the [Project Report](report.qmd) for detailed next steps.
