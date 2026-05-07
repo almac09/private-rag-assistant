@@ -1,0 +1,139 @@
+---
+title: "RAG Testing Methodology"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+## Why methodology first
+
+Settling the testing approach *before* running the model reduces the temptation to adjust it in
+response to results. This page defines — in advance — what will be measured, how, and what counts
+as a good or bad outcome. The goal is a setup where someone else could reproduce the results from
+scratch and get the same numbers.
+
+---
+
+## Test set design
+
+The test set is a fixed set of question–answer pairs drawn from the CBI speeches corpus. Because
+the answers exist in the source documents, the correct retrieval target is knowable — which means
+failures can be classified rather than just counted.
+
+### Principles
+
+- **Fixed and versioned.** The test set does not change between evaluation runs. If questions are
+  added or removed, a new version is created and both versions are retained.
+- **Ground-truth sourced from documents.** Every expected answer is traceable to a specific
+  passage in the corpus. The citation is recorded alongside the question.
+- **Varied query types.** The set should include: factual lookups, multi-sentence explanations,
+  comparative questions, and questions where the answer is *not* in the corpus (to test abstention
+  behaviour).
+- **Small enough to read.** Aim for 20–40 questions. Every answer should be read by a human
+  before any RAGAS score is trusted.
+
+### Test set file
+
+Questions live in `tests/test_questions.json`. Format:
+
+```json
+[
+  {
+    "id": "q001",
+    "question": "What did the Governor say about climate risk in 2023?",
+    "expected_answer": "...",
+    "source_document": "cbi_speech_2023_04_17.txt",
+    "source_passage": "..."
+  }
+]
+```
+
+---
+
+## Evaluation phases
+
+The same test set is run at each phase. Comparing scores across phases shows directly what adding
+or changing material does to retrieval and generation quality.
+
+| Phase | Knowledge base state | Purpose |
+|-------|----------------------|---------|
+| 0 | Empty (no documents) | Baseline — model responds from training alone |
+| 1 | Single document | Does adding one document change anything? |
+| 2 | Full CBI speeches corpus | Retrieval at scale — new interference patterns emerge |
+| 3 | Tuned chunking / retrieval | Effect of hyperparameter choices |
+
+Each run saves its outputs to `tests/results/phase_N_YYYYMMDD.json` so phases can be replayed.
+
+---
+
+## RAGAS metrics
+
+[RAGAS](https://docs.ragas.io) provides four automated metrics. Each is a number between 0 and 1.
+
+| Metric | What it measures | How to interpret |
+|--------|-----------------|-----------------|
+| **Faithfulness** | Does the answer contradict the retrieved chunks? | Low score → model is hallucinating or ignoring context |
+| **Answer Relevancy** | Does the answer address the question asked? | Low score → answer is off-topic or evasive |
+| **Context Precision** | Are the retrieved chunks relevant to the question? | Low score → retriever is pulling back noise |
+| **Context Recall** | Does the retrieved context contain the information needed to answer? | Low score → relevant material isn't being found |
+
+### Limitations
+
+RAGAS scores are useful signals, not ground truth. Known failure modes:
+
+- **Faithfulness can look fine while the answer is factually wrong** — if the retrieved chunk
+  contains an error, the model can be "faithful" to a bad source.
+- **Answer Relevancy penalises hedged answers** — a model that correctly says "I don't know" may
+  score lower than one that guesses confidently.
+- **Context Recall requires a reference answer** — if the reference is poorly written, the metric
+  misfires.
+
+The rule of thumb: if a RAGAS score looks surprising, read the actual answer and retrieved chunks
+before drawing a conclusion.
+
+---
+
+## Per-run recording convention
+
+Every evaluation run records:
+
+1. The question asked
+2. The chunks retrieved (with document name and chunk index)
+3. The full generated answer
+4. The four RAGAS scores
+5. A one-line human annotation: `PASS`, `FAIL — retrieval`, `FAIL — generation`, or
+   `FAIL — question design`
+
+Failures are not hidden. The failure annotation is as important as the score — it is what allows
+the discussion section of the report to say something meaningful about *why* the system is or isn't
+working.
+
+---
+
+## Running the evaluation
+
+```powershell
+# Run the full test suite and save results
+pytest tests/ --json-report --json-report-file=test-results.json
+
+# Run RAGAS evaluation specifically
+python -m rag.evaluate --phase 1 --output tests/results/phase_1.json
+```
+
+Results are rendered in the [Evaluation page](evaluation.qmd) and regenerated on each Quarto build.
+
+---
+
+## Learning resources
+
+If you want to go deeper on structured RAG evaluation before the results phase:
+
+- **RAGAS docs** — [docs.ragas.io](https://docs.ragas.io) — covers each metric with worked examples
+- **"Evaluating RAG Pipelines" (LangChain blog)** — practical guide to setting up evaluation loops
+- **"RAG vs Fine-tuning" (Databricks blog)** — useful framing of where RAG tends to fail and why
+- **Es et al. (2023)** — the original RAGAS paper (cited in report References) — worth reading the
+  limitations section in particular
+
+The key habit to build: read a sample of raw outputs (question + retrieved chunks + answer) before
+looking at any aggregate score. Numbers compress information; reading a few examples restores it.
