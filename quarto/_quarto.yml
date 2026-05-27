@@ -15,6 +15,8 @@ website:
         text: Evaluation Results
       - href: presentation.qmd
         text: Presentation
+      - href: ingestion.qmd
+        text: Phase 1 — Ingestion
       - href: tests.qmd
         text: Test Results
       - href: github_workflow.qmd
