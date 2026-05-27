@@ -1,0 +1,150 @@
+---
+title: "Phase 4 — Confidence Signal"
+subtitle: "Surfacing uncertainty to the user without extra LLM calls"
+date: today
+date-format: "DD MMMM YYYY HH:mm"
+---
+
+## Why a confidence signal matters
+
+A RAG system that gives confident-sounding answers is more dangerous than one that admits
+uncertainty — the user can't calibrate their trust in the output.
+[Issue #14](https://github.com/almac09/private-rag-assistant/issues/14) adds a lightweight
+confidence signal to every `ask()` call.  It costs nothing at inference time (no extra LLM
+calls, no RAGAS scoring) and gives the user three concrete signals to display.
+
+---
+
+## The signal
+
+```{python}
+#| code-fold: false
+from rag.query import confidence_signal, ABSTAIN_PHRASE
+
+# What the signal contains
+import inspect
+print(inspect.getsource(confidence_signal))
+```
+
+---
+
+## Demo — certain answer
+
+```{python}
+#| code-fold: false
+sources = [
+    {"source": "speech_042.txt", "speaker": "Lagarde"},
+    {"source": "speech_107.txt", "speaker": "Lane"},
+    {"source": "speech_042.txt", "speaker": "Lagarde"},  # duplicate file
+]
+answer = "The ECB targets inflation at 2% over the medium term."
+
+sig = confidence_signal(answer, sources)
+for k, v in sig.items():
+    print(f"  {k:20s}: {v}")
+```
+
+The model gave a real answer, retrieved 3 chunks from 2 distinct documents.
+`is_uncertain` is `False` — safe to present to the user.
+
+---
+
+## Demo — uncertain answer (abstention)
+
+```{python}
+#| code-fold: false
+sig = confidence_signal(ABSTAIN_PHRASE, [])
+for k, v in sig.items():
+    print(f"  {k:20s}: {v}")
+```
+
+The model admitted it could not find an answer in context.
+`is_uncertain` is `True` — the UI should flag this and prompt the user to
+rephrase or check whether the topic is covered by the knowledge base.
+
+---
+
+## What the signal looks like in ask()
+
+`confidence` is returned alongside `answer` and `sources` in every `ask()` call — no extra
+parameters needed:
+
+```python
+from rag.query import ask
+
+result = ask(chain, "What is the ECB's inflation target?")
+
+print(result["answer"])
+# → "The ECB targets inflation at 2% over the medium term."
+
+print(result["confidence"])
+# → {"is_uncertain": False, "n_sources": 4, "has_sources": True, "unique_documents": 3}
+```
+
+---
+
+## Displaying uncertainty to the user
+
+```{python}
+def render_answer(result: dict) -> None:
+    """Print a formatted answer with confidence indicators."""
+    conf = result["confidence"]
+    answer = result["answer"]
+
+    if conf["is_uncertain"]:
+        label = "⚠️  LOW CONFIDENCE"
+        note  = "The system could not find an answer in the loaded documents."
+    elif not conf["has_sources"]:
+        label = "⚠️  NO SOURCES"
+        note  = "No chunks were retrieved. Check the knowledge base is populated."
+    elif conf["n_sources"] < 2:
+        label = "🟡 MODERATE"
+        note  = f"Answer based on {conf['n_sources']} chunk from {conf['unique_documents']} document(s)."
+    else:
+        label = "✅ CONFIDENT"
+        note  = (f"Retrieved {conf['n_sources']} chunks from "
+                 f"{conf['unique_documents']} document(s).")
+
+    print(f"[{label}]")
+    print(f"Answer: {answer}")
+    print(f"Note:   {note}")
+    print()
+
+
+# Simulate a successful retrieval
+render_answer({
+    "answer": "The ECB targets 2% inflation over the medium term.",
+    "sources": [{"source": "s1.txt"}, {"source": "s2.txt"}, {"source": "s1.txt"}],
+    "confidence": confidence_signal(
+        "The ECB targets 2% inflation over the medium term.",
+        [{"source": "s1.txt"}, {"source": "s2.txt"}, {"source": "s1.txt"}],
+    ),
+})
+
+# Simulate an abstention
+render_answer({
+    "answer": ABSTAIN_PHRASE,
+    "sources": [],
+    "confidence": confidence_signal(ABSTAIN_PHRASE, []),
+})
+```
+
+---
+
+## Confidence signal at a glance
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `is_uncertain` | bool | Model returned the abstain phrase — answer not grounded |
+| `n_sources` | int | Number of chunks retrieved from the vectorstore |
+| `has_sources` | bool | At least one chunk was retrieved |
+| `unique_documents` | int | Number of distinct source files in the retrieved set |
+
+::: {.callout-note}
+This is a **heuristic signal**, not a calibrated probability.  A high `n_sources` is
+necessary but not sufficient for a good answer — retrieval can pull back irrelevant chunks.
+For rigorous scoring, run RAGAS via `rag.evaluate.run_evaluation()`.
+:::
+
+Tests: `tests/test_query.py` — 8 new tests covering `confidence_signal()` and the `confidence`
+key in `ask()` return values; all CI-safe (no Ollama required).

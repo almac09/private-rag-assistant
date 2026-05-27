@@ -124,11 +124,58 @@ def test_build_rag_chain_uses_model(mock_ollama):
 
 
 # ---------------------------------------------------------------------------
-# ask
+# confidence_signal
 # ---------------------------------------------------------------------------
 
-def test_ask_returns_answer_and_sources():
-    """ask() returns a dict with 'answer' and 'sources' keys."""
+def test_confidence_signal_certain_answer():
+    from rag.query import confidence_signal
+    sources = [{"source": "s.txt"}, {"source": "t.txt"}]
+    sig = confidence_signal("The ECB raised rates by 25bp.", sources)
+    assert sig["is_uncertain"] is False
+    assert sig["n_sources"] == 2
+    assert sig["has_sources"] is True
+    assert sig["unique_documents"] == 2
+
+
+def test_confidence_signal_uncertain_answer():
+    from rag.query import confidence_signal, ABSTAIN_PHRASE
+    sig = confidence_signal(ABSTAIN_PHRASE, [])
+    assert sig["is_uncertain"] is True
+    assert sig["n_sources"] == 0
+    assert sig["has_sources"] is False
+
+
+def test_confidence_signal_counts_unique_sources():
+    from rag.query import confidence_signal
+    # Two chunks from same file → unique_documents == 1
+    sources = [{"source": "speech.txt"}, {"source": "speech.txt"}]
+    sig = confidence_signal("Some answer.", sources)
+    assert sig["unique_documents"] == 1
+
+
+def test_confidence_signal_handles_missing_source_key():
+    from rag.query import confidence_signal
+    # Metadata without 'source' key should not crash
+    sources = [{"speaker": "Lagarde"}, {"speaker": "Lane"}]
+    sig = confidence_signal("Answer.", sources)
+    assert sig["unique_documents"] == 0
+    assert sig["n_sources"] == 2
+
+
+def test_confidence_signal_empty_sources():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer with no sources.", [])
+    assert sig["n_sources"] == 0
+    assert sig["has_sources"] is False
+    assert sig["unique_documents"] == 0
+
+
+# ---------------------------------------------------------------------------
+# ask — return shape
+# ---------------------------------------------------------------------------
+
+def test_ask_returns_answer_sources_confidence():
+    """ask() returns a dict with 'answer', 'sources', and 'confidence' keys."""
     from rag.query import ask
     mock_chain = MagicMock()
     mock_chain.invoke.return_value = _mock_chain_result()
@@ -137,6 +184,7 @@ def test_ask_returns_answer_and_sources():
 
     assert "answer" in result
     assert "sources" in result
+    assert "confidence" in result
 
 
 def test_ask_answer_value():
@@ -208,3 +256,37 @@ def test_ask_sources_speaker_metadata():
     result = ask(mock_chain, "Q?")
 
     assert result["sources"][0]["speakers"] == "Philip Lane"
+
+
+def test_ask_confidence_is_certain_for_good_answer():
+    """confidence.is_uncertain is False when the model gives a real answer."""
+    from rag.query import ask
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(answer="The rate is 2%.")
+
+    result = ask(mock_chain, "Q?")
+
+    assert result["confidence"]["is_uncertain"] is False
+
+
+def test_ask_confidence_is_uncertain_for_abstain():
+    """confidence.is_uncertain is True when model returns the abstain phrase."""
+    from rag.query import ask, ABSTAIN_PHRASE
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(answer=ABSTAIN_PHRASE)
+
+    result = ask(mock_chain, "Q?")
+
+    assert result["confidence"]["is_uncertain"] is True
+
+
+def test_ask_confidence_n_sources_matches_docs():
+    """confidence.n_sources equals the number of retrieved documents."""
+    from rag.query import ask
+    docs = [_make_doc(), _make_doc(), _make_doc()]
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(docs=docs)
+
+    result = ask(mock_chain, "Q?")
+
+    assert result["confidence"]["n_sources"] == 3
