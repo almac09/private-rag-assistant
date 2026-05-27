@@ -83,9 +83,11 @@ Every GitHub issue must go through these four steps in order before it is closed
 Do not close an issue until all four are complete.
 
 1. **Tests pass** — write or update pytest tests that cover the issue's acceptance
-   criteria. Run `pytest tests/ -v` locally and confirm green. Unit tests use
-   synthetic fixtures and must pass in CI; real-data smoke tests are marked
-   `@real_data` and skipped in CI automatically.
+   criteria. Run the full suite locally and confirm green (see command below).
+   Commit `test-results.json` alongside any code changes — this is what
+   `tests.html` on the published site reads. Unit tests use synthetic fixtures
+   and must pass in CI; real-data smoke tests are marked `@real_data` and
+   skipped in CI automatically.
 
 2. **Demo in Quarto** — add or update a `.qmd` page in `quarto/` that shows the
    feature working end-to-end. Use the same synthetic data as the unit tests so
@@ -114,6 +116,17 @@ Do not close an issue until all four are complete.
 | `@real_data` smoke tests | **Local only** | Automatically skipped in CI; run locally when real CSV is present |
 | `quarto preview quarto/*.qmd` | **Local only** | Manually before merging — this is the review step for Quarto pages |
 | Quarto site publish | CI (GitHub Actions) | Automatically on merge to `main` only |
+
+**Before every commit, run the full test suite and commit the results file:**
+
+```powershell
+pytest tests/ -v --json-report --json-report-file=test-results.json
+git add test-results.json
+```
+
+`test-results.json` is committed to the repo so `tests.html` on the published
+site always shows the results from the last commit — no pytest step needed in
+the publish workflow.
 
 **Rule of thumb:** if a check needs Ollama, the real CSV, or a browser, it's local. Everything
 else should pass in CI. Never merge to `main` without running `quarto preview` locally first —
