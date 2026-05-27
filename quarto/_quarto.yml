@@ -35,6 +35,8 @@ website:
             text: GitHub Workflow
           - href: rag_testing_methodology.qmd
             text: RAG Testing Methodology
+          - href: logging.qmd
+            text: Phase 4 — Query Logging
 
 format:
   html:

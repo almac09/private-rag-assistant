@@ -21,6 +21,7 @@ where it works, where it fails, and how to evaluate and explain it honestly.
 - [Evaluation Results](evaluation.qmd) — RAGAS scores per phase
 - [Presentation](presentation.qmd) — slide deck summary
 - [Tests](tests.qmd) — test suite and results
+- [Query Logging](logging.qmd) — failed-query capture and replay (Phase 4)
 
 
 ## Project phases
@@ -30,6 +31,6 @@ where it works, where it fails, and how to evaluate and explain it honestly.
 | 0 | Repo setup + hello world | ✅ Complete |
 | 1 | Document ingestion | ✅ Complete |
 | 2 | RAG query pipeline | ✅ Complete |
-| 3 | Evaluation harness | ⬜ Not started |
-| 4 | Feedback + confidence | ⬜ Not started |
+| 3 | Evaluation harness (RAGAS) | ✅ Complete |
+| 4 | Feedback + confidence | 🔄 In progress |
 | 5 | Enterprise deployment plan | ⬜ Not started |
