@@ -1,4 +1,4 @@
-project:
+uarto project:
   type: website
   title: "Building a RAG System I Can Explain"
   output-dir: _site
@@ -35,6 +35,8 @@ website:
             text: GitHub Workflow
           - href: rag_testing_methodology.qmd
             text: RAG Testing Methodology
+          - href: confidence.qmd
+            text: Phase 4 — Confidence Signal
           - href: logging.qmd
             text: Phase 4 — Query Logging
 
