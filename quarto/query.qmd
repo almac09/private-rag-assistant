@@ -6,11 +6,21 @@ format:
     toc-depth: 2
 ---
 
+::: {.callout-note}
+**Ollama not running — by design.**
+Ollama is deliberately not started until
+[Issue #8](https://github.com/almac09/private-rag-assistant/issues/8)
+(end-to-end notebook with real corpus). Running the embedding model and LLM
+locally is slow; deferring it keeps the development loop fast and keeps CI
+green without any external dependencies. All cells on this page use lightweight
+mocks in place of `ChatOllama` and `ChromaDB` — the same strategy used in
+`tests/test_query.py`. Real Ollama output will appear in `notebooks/02_query.ipynb`.
+:::
+
 This page demonstrates the query pipeline built in Phase 2. Every output is
-produced by the live `rag.query` module — not hardcoded. Because Ollama is not
-available at render time, the cells use the same mock strategy as
-`tests/test_query.py`, replacing `ChatOllama` and `ChromaDB` with lightweight
-fakes so the pipeline logic can be demonstrated without a running model.
+produced by the live `rag.query` module — not hardcoded. Ollama is replaced
+with lightweight fakes so the pipeline logic can be demonstrated without a
+running model (see note above).
 
 Related issues:
 [#5 Load vectorstore & build chain](https://github.com/almac09/private-rag-assistant/issues/5)
