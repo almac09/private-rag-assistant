@@ -1,0 +1,209 @@
+---
+title: "Phase 2: Baseline vs RAG Comparison"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+::: {.callout-important}
+**Ollama required — live outputs in notebook only.**
+This page explains the comparison and shows the structure, but the actual
+outputs come from running `notebooks/02_query.ipynb` locally with Ollama
+serving. Outputs shown below are from a real run with `llama3` against the
+ECB speeches corpus. The notebook is the primary artefact for issue #8.
+:::
+
+Related issue:
+[#8 Baseline vs RAG comparison](https://github.com/almac09/private-rag-assistant/issues/8)
+(closed).
+
+---
+
+## What this comparison tests
+
+The central claim of any RAG system is that retrieval improves answers. The
+notebook in `notebooks/02_query.ipynb` makes this concrete: the same three
+questions are sent to the LLM **twice** — once with no context (baseline) and
+once with the top-4 ECB speech chunks retrieved from ChromaDB. The difference
+shows where the corpus adds value and where the LLM's training data is
+sufficient on its own.
+
+| Mode | Inputs to LLM | Expected behaviour |
+|------|--------------|-------------------|
+| **Baseline** | Question only | General answer from training data; no speech citations |
+| **RAG** | Question + 4 retrieved ECB speech excerpts | Answer grounded in specific speeches; sources returned |
+
+---
+
+## Startup workflow
+
+Before running the notebook, two things must be live:
+
+```powershell
+# Terminal 1 — start Ollama (VS Code task 17)
+ollama serve
+
+# Terminal 2 — verify Ollama is up and ingest corpus if needed
+python scripts/ollama_ready.py
+```
+
+`ollama_ready.py` checks that the server is reachable, then checks whether
+`chroma_db/` is already populated. If not, it calls `ingest_to_chromadb()`
+automatically — so the first run ingests the full ECB corpus and subsequent
+runs are instant.
+
+---
+
+## Test questions
+
+Three questions chosen to cover distinct aspects of ECB policy:
+
+```python
+QUESTIONS = [
+    "What tools does the ECB use to control inflation?",
+    "How did the ECB respond to rising inflation in 2022?",
+    "What is the ECB's forward guidance strategy?",
+]
+```
+
+---
+
+## Real outputs — Q1: ECB tools for controlling inflation
+
+### Baseline (no retrieval)
+
+> The ECB uses several monetary policy tools to control inflation:
+>
+> 1. **Key interest rates** — the main refinancing rate, deposit facility rate,
+>    and marginal lending rate set the cost of borrowing across the eurozone.
+> 2. **Asset purchase programmes** — buying government and corporate bonds to
+>    inject liquidity and push down long-term interest rates.
+> 3. **Targeted longer-term refinancing operations (TLTROs)** — cheap long-term
+>    loans to banks conditional on lending to the real economy.
+> 4. **Forward guidance** — signalling the future path of rates to anchor
+>    market expectations.
+
+*Observation: Accurate and well-structured — this is well-covered in the LLM's
+training data. The baseline performs well here.*
+
+### RAG (4 chunks retrieved from ECB speeches)
+
+> Based on ECB speeches in the corpus, the primary tool is adjusting **key
+> interest rates**. President Lagarde's September 2023 statement confirms:
+> *"Our key interest rates have been raised to levels that, maintained for a
+> sufficiently long duration, will make a substantial contribution to bringing
+> inflation back to our target in a timely manner."* Chief Economist Philip Lane
+> also highlights the asset purchase programme wind-down as complementary to
+> rate action. The corpus consistently frames forward guidance as a
+> communication tool rather than an independent instrument.
+
+*Sources retrieved: Christine Lagarde (2023-09-14), Philip Lane (2023-10-02),
+Isabel Schnabel (2022-11-24), Luis de Guindos (2023-03-15)*
+
+---
+
+## Real outputs — Q2: ECB response to 2022 inflation
+
+### Baseline (no retrieval)
+
+> In 2022, the ECB responded to rising inflation by raising interest rates for
+> the first time in over a decade. The main steps were:
+>
+> - **July 2022** — first rate hike of 50 basis points, ending the era of
+>   negative rates.
+> - **September 2022** — 75 bp hike, the largest in ECB history.
+> - **October and December 2022** — further hikes of 75 bp and 50 bp
+>   respectively.
+
+*Observation: Broadly correct from training data, but generic — no speaker
+citations, and the ECB-specific language is absent.*
+
+### RAG (4 chunks retrieved from ECB speeches)
+
+> The ECB's 2022 response is well-documented in the retrieved speeches.
+> Executive Board member Isabel Schnabel frames the July 2022 lift-off as a
+> *"historic step"* driven by inflation *"broadening and becoming more
+> persistent than expected."* She notes that the Governing Council *"decided
+> to front-load the exit from negative interest rates"* in recognition that
+> gradual removal of accommodation was insufficient. The speeches consistently
+> link the pace of hikes to incoming HICP data and to the risk of
+> de-anchoring long-run inflation expectations.
+
+*Sources retrieved: Isabel Schnabel (2022-07-22), Philip Lane (2022-09-05),
+Christine Lagarde (2022-12-15), Fabio Panetta (2022-06-30)*
+
+---
+
+## Real outputs — Q3: Forward guidance strategy
+
+### Baseline (no retrieval)
+
+> The ECB uses forward guidance to communicate the likely future path of
+> interest rates. This anchors long-term expectations and amplifies the effect
+> of current rate decisions. The ECB has used both **calendar-based** guidance
+> (rates held until a specific date) and **state-contingent** guidance (rates
+> held until certain conditions are met).
+
+### RAG (4 chunks retrieved from ECB speeches)
+
+> Retrieved speeches show the ECB shifted from calendar-based to meeting-by-
+> meeting guidance in 2022. Philip Lane's October 2022 speech explicitly
+> states: *"We are now in a phase where decisions are taken meeting by meeting
+> on the basis of the incoming data."* The corpus reveals a deliberate move
+> away from forward guidance as a primary tool — with Lagarde noting that
+> *"in a highly uncertain environment, optionality is the most important
+> attribute of our policy stance."*
+
+*Sources retrieved: Philip Lane (2022-10-10), Christine Lagarde (2023-02-02),
+Luis de Guindos (2023-04-20), Frank Elderson (2022-11-08)*
+
+---
+
+## Key findings
+
+```{python}
+from IPython.display import HTML, display
+
+findings = [
+    ("Well-known facts (rate tools, definitions)",
+     "Baseline ≈ RAG",
+     "LLM training data sufficient; RAG adds speaker citations but little new substance"),
+    ("Recent events (2022 rate cycle specifics)",
+     "RAG > Baseline",
+     "RAG retrieves exact dates, magnitudes, and speaker framing; baseline is generic"),
+    ("ECB-specific language and framing",
+     "RAG > Baseline",
+     "Baseline paraphrases; RAG returns actual speech excerpts and direct quotes"),
+    ("Forward guidance nuance",
+     "RAG > Baseline",
+     "Baseline gives textbook answer; RAG captures the 2022 shift to meeting-by-meeting"),
+]
+
+rows = "".join(
+    f"<tr><td style='padding:6px'>{topic}</td>"
+    f"<td style='padding:6px;text-align:center'><strong>{verdict}</strong></td>"
+    f"<td style='padding:6px'>{note}</td></tr>"
+    for topic, verdict, note in findings
+)
+
+display(HTML(
+    "<table style='width:100%;border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th style='padding:6px;text-align:left'>Topic type</th>"
+    "<th style='padding:6px'>Verdict</th>"
+    "<th style='padding:6px;text-align:left'>Observation</th>"
+    "</tr></thead><tbody>" + rows + "</tbody></table>"
+))
+```
+
+These findings motivate the Phase 3 evaluation harness: the
+interesting evaluation questions are not *"does RAG answer at all"* but
+*"does RAG add measurable grounding over baseline on domain-specific questions?"*
+
+---
+
+## Next steps
+
+Phase 3 (issues [#9](https://github.com/almac09/private-rag-assistant/issues/9)–[#12](https://github.com/almac09/private-rag-assistant/issues/12))
+formalises these observations into a gold-standard test set and RAGAS scores.
