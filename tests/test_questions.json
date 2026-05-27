@@ -1,0 +1,143 @@
+[
+  {
+    "id": "q001",
+    "question": "What is the ECB's quantitative definition of price stability?",
+    "ground_truth": "The ECB defines price stability as inflation of 2% over the medium term, measured by the Harmonised Index of Consumer Prices (HICP) for the euro area. The target is symmetric, meaning deviations above and below 2% are equally undesirable.",
+    "tags": ["factual", "mandate"],
+    "in_corpus": true
+  },
+  {
+    "id": "q002",
+    "question": "When did the ECB begin raising interest rates in the 2022 tightening cycle and by how much?",
+    "ground_truth": "The ECB raised interest rates for the first time in over a decade at its July 2022 meeting, increasing all three key rates by 50 basis points. This ended the era of negative interest rates and marked the start of the tightening cycle.",
+    "tags": ["factual", "temporal", "rates"],
+    "in_corpus": true
+  },
+  {
+    "id": "q003",
+    "question": "What tools does the ECB use to implement monetary policy?",
+    "ground_truth": "The ECB implements monetary policy through key interest rates (main refinancing rate, deposit facility rate, marginal lending facility rate), asset purchase programmes (APP and PEPP), targeted longer-term refinancing operations (TLTROs), and forward guidance on the expected path of interest rates.",
+    "tags": ["factual", "instruments"],
+    "in_corpus": true
+  },
+  {
+    "id": "q004",
+    "question": "What is the Pandemic Emergency Purchase Programme (PEPP) and why was it introduced?",
+    "ground_truth": "The PEPP is a temporary asset purchase programme launched in March 2020 in response to the COVID-19 pandemic. It was introduced to counter the serious risks to the monetary policy transmission mechanism and the outlook for the euro area posed by the pandemic.",
+    "tags": ["factual", "programmes"],
+    "in_corpus": true
+  },
+  {
+    "id": "q005",
+    "question": "How does the ECB describe the transmission mechanism of monetary policy?",
+    "ground_truth": "The monetary policy transmission mechanism is the process through which ECB interest rate decisions affect the broader economy and ultimately inflation. It works through banks adjusting their lending rates, which affects credit availability, investment, consumption, asset prices, and exchange rates, ultimately feeding through to output and prices.",
+    "tags": ["analytical", "mechanism"],
+    "in_corpus": true
+  },
+  {
+    "id": "q006",
+    "question": "What was the ECB's assessment of core inflation in the euro area in 2023?",
+    "ground_truth": "In 2023, the ECB noted that core inflation (excluding energy and food) remained elevated and sticky, declining more slowly than headline inflation. The Governing Council emphasised that underlying inflation pressures needed to ease substantially before rate cuts could be considered.",
+    "tags": ["analytical", "temporal", "inflation"],
+    "in_corpus": true
+  },
+  {
+    "id": "q007",
+    "question": "What is the Transmission Protection Instrument (TPI)?",
+    "ground_truth": "The TPI is a tool announced by the ECB in July 2022 to ensure that the monetary policy stance is transmitted smoothly across all euro area countries. It allows the ECB to purchase securities of euro area countries experiencing unwarranted, disorderly market dynamics that could pose a serious threat to the transmission of monetary policy.",
+    "tags": ["factual", "instruments"],
+    "in_corpus": true
+  },
+  {
+    "id": "q008",
+    "question": "How has the ECB approached forward guidance in its communication?",
+    "ground_truth": "The ECB shifted from calendar-based and state-contingent forward guidance to a data-dependent, meeting-by-meeting approach in 2022. This change reflected the increased uncertainty in the inflation outlook, with the Governing Council no longer committing to a future rate path in advance.",
+    "tags": ["analytical", "communication"],
+    "in_corpus": true
+  },
+  {
+    "id": "q009",
+    "question": "What does the ECB say about the role of wages in the inflation outlook?",
+    "ground_truth": "The ECB has highlighted that wage growth is a key upside risk to the inflation outlook. Speeches emphasise monitoring labour cost dynamics closely, as strong nominal wage growth combined with weak productivity could entrench services inflation and delay the return of headline inflation to the 2% target.",
+    "tags": ["analytical", "inflation"],
+    "in_corpus": true
+  },
+  {
+    "id": "q010",
+    "question": "What was the ECB's largest single interest rate increase and when did it occur?",
+    "ground_truth": "The ECB's largest single rate increase in the 2022 cycle was 75 basis points, applied at the September 2022 Governing Council meeting. The ECB described this as a major step to front-load the transition away from accommodative monetary policy.",
+    "tags": ["factual", "temporal", "rates"],
+    "in_corpus": true
+  },
+  {
+    "id": "q011",
+    "question": "How does the ECB explain the difference between headline and core inflation?",
+    "ground_truth": "Headline inflation measures the overall change in the HICP including energy and food prices, which are volatile and often driven by supply shocks outside the ECB's control. Core inflation excludes these components to reveal underlying demand-driven price pressures, which better reflect the medium-term inflation trend that monetary policy can influence.",
+    "tags": ["analytical", "inflation"],
+    "in_corpus": true
+  },
+  {
+    "id": "q012",
+    "question": "What is the ECB's approach to climate change within its monetary policy mandate?",
+    "ground_truth": "The ECB has incorporated climate-related considerations into its monetary policy framework, including tilting its corporate bond purchases towards issuers with better climate performance, conducting climate stress tests, and disclosing the climate footprint of its portfolios. The ECB frames this as consistent with its price stability mandate given the macroeconomic risks from climate change.",
+    "tags": ["analytical", "climate"],
+    "in_corpus": true
+  },
+  {
+    "id": "q013",
+    "question": "What does the ECB say about the natural rate of interest (r-star)?",
+    "ground_truth": "ECB speakers have discussed the neutral rate of interest (r-star) as a benchmark for assessing whether monetary policy is accommodative or restrictive. Estimates suggest the neutral rate may have risen modestly post-pandemic due to structural factors including higher public investment and the green transition, though significant uncertainty surrounds these estimates.",
+    "tags": ["analytical", "rates"],
+    "in_corpus": true
+  },
+  {
+    "id": "q014",
+    "question": "How did the ECB respond to the energy price shock following Russia's invasion of Ukraine?",
+    "ground_truth": "The ECB recognised that the energy price shock from the war in Ukraine represented a major inflationary supply shock beyond its direct control. Speeches emphasised the need to prevent second-round effects on wages and inflation expectations, and justified front-loading rate hikes to anchor expectations even as the shock also threatened growth.",
+    "tags": ["analytical", "temporal", "geopolitical"],
+    "in_corpus": true
+  },
+  {
+    "id": "q015",
+    "question": "What is the ECB's view on the appropriate duration of the restrictive policy stance?",
+    "ground_truth": "ECB communications consistently stated that interest rates would remain at sufficiently restrictive levels for as long as necessary to bring inflation back to the 2% target in a timely manner. The Governing Council rejected committing to a specific end date, emphasising data dependence and the need to see underlying inflation converge sustainably.",
+    "tags": ["analytical", "communication"],
+    "in_corpus": true
+  },
+  {
+    "id": "q016",
+    "question": "How does the ECB measure and monitor inflation expectations?",
+    "ground_truth": "The ECB monitors inflation expectations through market-based measures such as inflation-linked swap rates and break-even inflation rates, as well as survey-based measures such as the Survey of Professional Forecasters (SPF) and the ECB Consumer Expectations Survey. Anchoring long-run expectations at 2% is a key indicator of policy credibility.",
+    "tags": ["factual", "measurement"],
+    "in_corpus": true
+  },
+  {
+    "id": "q017",
+    "question": "What is the ECB's mandate under the EU Treaty?",
+    "ground_truth": "Under Article 127 of the Treaty on the Functioning of the European Union, the ECB's primary objective is to maintain price stability in the euro area. Without prejudice to this primary objective, the ECB shall support the general economic policies of the EU, including sustainable growth and full employment.",
+    "tags": ["factual", "mandate"],
+    "in_corpus": true
+  },
+  {
+    "id": "q018",
+    "question": "What is the ECB's policy on interest rates as of 2025?",
+    "ground_truth": "I don't know based on the available speeches.",
+    "tags": ["abstention", "temporal"],
+    "in_corpus": false,
+    "note": "Corpus covers speeches to approximately 2023; 2025 policy details are unlikely to be present."
+  },
+  {
+    "id": "q019",
+    "question": "What is the ECB's position on issuing a digital euro?",
+    "ground_truth": "The ECB has been actively investigating a potential digital euro as a complement to cash, launching a preparation phase in 2023. ECB speeches emphasise that a digital euro would be a risk-free digital means of payment for euro area citizens and would not replace cash. The design aims to preserve financial stability and privacy.",
+    "tags": ["analytical", "digital"],
+    "in_corpus": true
+  },
+  {
+    "id": "q020",
+    "question": "How does the ECB communicate its decisions to the public?",
+    "ground_truth": "The ECB communicates through press conferences following Governing Council meetings, where the President presents and explains policy decisions. Additional channels include the monetary policy statement, Economic Bulletin, blog posts by Executive Board members, speeches, and the ECB's strategy of 'listening events' with civil society to improve accessibility.",
+    "tags": ["factual", "communication"],
+    "in_corpus": true
+  }
+]
