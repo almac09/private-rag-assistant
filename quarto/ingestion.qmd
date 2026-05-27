@@ -1,0 +1,137 @@
+---
+title: "Phase 1: Document Ingestion"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+This page demonstrates the ingestion pipeline built in Phase 1 using the same
+synthetic data as the unit tests in `tests/test_ingest.py`. Every output here
+is produced by the live `rag.ingest` module — not hardcoded.
+
+Related issues: [#1 Load CSV](https://github.com/almac09/private-rag-assistant/issues/1)
+(closed), [#2 Chunk documents](https://github.com/almac09/private-rag-assistant/issues/2)
+(closed).
+
+---
+
+## Step 1 — Load speeches from CSV
+
+`load_speeches_csv()` reads each row of the speeches CSV and converts it to a
+LangChain `Document` with the speech text as `page_content` and all columns
+(date, year, speakers, title) attached as `metadata`.
+
+```{python}
+import sys
+sys.path.insert(0, "..")
+
+import pandas as pd
+from io import StringIO
+from rag.ingest import load_speeches_csv, chunk_documents
+
+# Same synthetic data used in test_load_speeches_csv and test_chunk_documents
+SAMPLE = pd.DataFrame({
+    "date":     ["2023-01-15", "2023-02-20"],
+    "year":     [2023, 2023],
+    "speakers": ["Christine Lagarde", "Philip Lane"],
+    "title":    ["Monetary Policy Speech", "Economic Outlook"],
+    "subtitle": ["January Meeting", "February Update"],
+    "contents": [
+        "The ECB reaffirms its commitment to price stability. " * 20,
+        "Economic conditions remain challenging. " * 20,
+    ],
+})
+
+import tempfile, os
+with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="") as f:
+    SAMPLE.to_csv(f, index=False)
+    tmp_path = f.name
+
+documents = load_speeches_csv(tmp_path)
+os.unlink(tmp_path)
+
+print(f"Speeches loaded: {len(documents)}")
+```
+
+### Loaded documents
+
+```{python}
+from IPython.display import HTML, display
+
+rows = "".join(
+    f"<tr><td>{i}</td><td>{d.metadata['speakers']}</td><td>{d.metadata['date']}</td>"
+    f"<td>{d.metadata['title']}</td><td>{len(d.page_content)} chars</td></tr>"
+    for i, d in enumerate(documents)
+)
+
+display(HTML(
+    "<table style='width:100%;border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th>#</th><th>Speaker</th><th>Date</th><th>Title</th><th>Content length</th>"
+    "</tr></thead><tbody>" + rows + "</tbody></table>"
+))
+```
+
+### Sample metadata
+
+```{python}
+import json
+print(json.dumps(documents[0].metadata, indent=2))
+```
+
+---
+
+## Step 2 — Chunk documents
+
+`chunk_documents()` splits each `Document` into smaller overlapping chunks using
+`RecursiveCharacterTextSplitter`. Metadata is preserved on every chunk so
+retrieved chunks can always be traced back to their source speech.
+
+```{python}
+chunks = chunk_documents(documents, chunk_size=100, chunk_overlap=10)
+
+print(f"Source documents : {len(documents)}")
+print(f"Chunks produced  : {len(chunks)}")
+print(f"Avg chunk length : {sum(len(c.page_content) for c in chunks) / len(chunks):.0f} chars")
+```
+
+### Chunk lengths
+
+```{python}
+lengths = [len(c.page_content) for c in chunks]
+
+bars = ""
+max_len = max(lengths)
+for i, l in enumerate(lengths):
+    width = int((l / max_len) * 300)
+    bars += (
+        f"<tr><td style='padding:2px 8px'>chunk {i}</td>"
+        f"<td><div style='background:#4c8bf5;height:16px;width:{width}px;border-radius:2px'></div></td>"
+        f"<td style='padding:2px 8px'>{l} chars</td></tr>"
+    )
+
+display(HTML(
+    "<table style='border-collapse:collapse'>" + bars + "</table>"
+))
+```
+
+### Sample chunk with metadata
+
+```{python}
+c = chunks[0]
+print(f"Content : {c.page_content[:120]}...")
+print()
+print(f"Metadata: {json.dumps(c.metadata, indent=2)}")
+```
+
+---
+
+## What this enables
+
+With `load_speeches_csv()` and `chunk_documents()` working, the next phase
+can embed these chunks using Ollama (`nomic-embed-text`) and store them in
+ChromaDB — enabling semantic similarity search over the full speeches corpus.
+
+See [Phase 1 issue #3](https://github.com/almac09/private-rag-assistant/issues/3)
+— Embed chunks and store in ChromaDB.
