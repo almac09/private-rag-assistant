@@ -21,6 +21,7 @@ where it works, where it fails, and how to evaluate and explain it honestly.
 - [Evaluation Results](evaluation.qmd) — RAGAS scores per phase
 - [Presentation](presentation.qmd) — slide deck summary
 - [Tests](tests.qmd) — test suite and results
+- [Query Logging](logging.qmd) — failed-query capture and replay (Phase 4)
 
 
 ## Project phases

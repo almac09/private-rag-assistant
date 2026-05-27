@@ -116,6 +116,8 @@ def confidence_signal(answer: str, sources: list[dict]) -> dict:
 
 def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
     """Run a question through the RAG chain and return answer, sources, and confidence.
+def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
+    """Run a question through the RAG chain and return answer + sources.
 
     Args:
         chain: LangChain RAG chain from :func:`build_rag_chain`.
@@ -138,9 +140,13 @@ def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
         "answer": answer,
         "sources": sources,
         "confidence": confidence_signal(answer, sources),
+    out = {
+        "answer": result["answer"],
+        "sources": [doc.metadata for doc in result["source_docs"]],
     }
     if log_path is not None:
         from rag.logger import log_query
 
         log_query(question, answer, sources, path=log_path)
+        log_query(question, out["answer"], out["sources"], path=log_path)
     return out
