@@ -29,6 +29,9 @@ jobs:
 
       - uses: quarto-dev/quarto-actions/setup@v2
 
+      - name: Run tests and generate results
+        run: uv run pytest tests/ -v --json-report --json-report-file=test-results.json || true
+
       - name: Render Quarto site
         run: quarto render quarto
         env:
