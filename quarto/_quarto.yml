@@ -25,6 +25,8 @@ website:
             text: Phase 1 — Ingestion
           - href: query.qmd
             text: Phase 2 — Query
+          - href: baseline_comparison.qmd
+            text: Phase 2 — Baseline vs RAG
       - section: "Quality & Process"
         contents:
           - href: tests.qmd
