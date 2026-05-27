@@ -331,6 +331,28 @@
             "postDebugTask": "Open Quarto Index"
         },
         {
+            "label": "19. Quarto Preview (live reload)",
+            "type": "process",
+            "command": "quarto",
+            "args": ["preview", "quarto"],
+            "windows": {
+                "command": "quarto.exe",
+                "args": ["preview", "quarto"]
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+        {
             "label": "Open Quarto Index",
             "type": "process",
             "command": "Start-Process",
@@ -341,7 +363,7 @@
                 "command": "powershell.exe",
                 "args": [
                     "-Command",
-                    "Start-Process '${workspaceFolder}/_quarto_site/index.html'"
+                    "Start-Process '${workspaceFolder}/quarto/_site/index.html'"
                 ]
             },
             "group": {
