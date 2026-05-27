@@ -76,19 +76,27 @@ def build_rag_chain(vectorstore, model: str = "llama3.2", k: int = 4):
     return chain
 
 
-def ask(chain, question: str) -> dict:
+def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
     """Run a question through the RAG chain and return answer + sources.
 
     Args:
         chain: LangChain RAG chain from :func:`build_rag_chain`.
         question: Natural-language question.
+        log_path: If provided, append the query result to this JSONL file via
+            :func:`rag.logger.log_query`.  Failed queries are flagged
+            automatically so they can be replayed later.
 
     Returns:
         Dict with keys ``answer`` (str) and ``sources`` (list of metadata dicts,
         one per retrieved chunk).
     """
     result = chain.invoke(question)
-    return {
+    out = {
         "answer": result["answer"],
         "sources": [doc.metadata for doc in result["source_docs"]],
     }
+    if log_path is not None:
+        from rag.logger import log_query
+
+        log_query(question, out["answer"], out["sources"], path=log_path)
+    return out

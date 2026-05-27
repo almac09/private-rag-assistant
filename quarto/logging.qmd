@@ -1,0 +1,169 @@
+---
+title: "Phase 4 — Query Logging"
+subtitle: "Capturing failed queries for replay and diagnosis"
+date: today
+date-format: "DD MMMM YYYY HH:mm"
+---
+
+## What this page covers
+
+Every RAG system produces bad answers.  The problem isn't that failures happen — it's that
+without a log, they vanish: the user moves on, the engineer has no record, and the next
+version of the pipeline has no way to confirm it improved.
+
+This page demonstrates the lightweight query-logging system added in
+[Issue #13](https://github.com/almac09/private-rag-assistant/issues/13).
+A single call to `ask()` can now persist every query to a JSONL file, with failed
+queries (those where the model admitted it had no answer) flagged automatically for
+later replay.
+
+---
+
+## How it works
+
+```{python}
+#| code-fold: false
+from rag.logger import is_failed_query, log_query, load_log, replay_failed, _UNKNOWN_SENTINEL
+
+# The sentinel phrase the prompt template injects when retrieval finds nothing useful
+print(f"Failure sentinel: {_UNKNOWN_SENTINEL!r}")
+```
+
+```{python}
+#| code-fold: false
+# Detect a failed query from the answer text alone — no LLM call needed
+good = "The ECB raised rates by 25 basis points in July 2022."
+bad  = _UNKNOWN_SENTINEL
+
+print(f"Good answer → failed: {is_failed_query(good)}")
+print(f"Bad  answer → failed: {is_failed_query(bad)}")
+```
+
+---
+
+## Synthetic log demo
+
+The demo below runs without Ollama.  It writes synthetic query results — one
+successful, two failed — to a temporary log and then reads them back.
+
+```{python}
+import tempfile, pathlib
+from rag.logger import log_query, load_log, replay_failed, _UNKNOWN_SENTINEL
+
+with tempfile.TemporaryDirectory() as tmp:
+    log_path = pathlib.Path(tmp) / "demo_log.jsonl"
+
+    # Successful answer
+    log_query(
+        "What is the ECB's inflation target?",
+        "The ECB targets inflation at 2% over the medium term.",
+        [{"source": "speech_042.txt", "speaker": "Lagarde"}],
+        path=log_path,
+    )
+
+    # Two failed answers (model couldn't find the answer in context)
+    log_query(
+        "What did the governor say about crypto-assets in 1995?",
+        _UNKNOWN_SENTINEL,
+        [],
+        path=log_path,
+    )
+    log_query(
+        "How many pages is the Stability Programme Update?",
+        _UNKNOWN_SENTINEL,
+        [],
+        path=log_path,
+    )
+
+    all_entries = load_log(log_path)
+    failed_entries = replay_failed(log_path)
+
+    print(f"Total logged:   {len(all_entries)}")
+    print(f"Failed queries: {len(failed_entries)}")
+    print()
+    for e in all_entries:
+        status = "FAIL" if e["failed"] else "OK  "
+        print(f"[{status}] {e['question'][:70]}")
+```
+
+---
+
+## Log format
+
+Each line in the JSONL file is a self-contained JSON object:
+
+```json
+{
+  "timestamp": "2026-05-27T20:00:00.000000",
+  "question": "What is the ECB's inflation target?",
+  "answer":   "The ECB targets inflation at 2% over the medium term.",
+  "sources":  [{"source": "speech_042.txt", "speaker": "Lagarde"}],
+  "failed":   false
+}
+```
+
+JSONL (one object per line) makes it trivial to process with standard tools:
+
+```bash
+# Count failed queries
+grep '"failed": true' logs/query_log.jsonl | wc -l
+
+# Extract only failed questions as a Python list
+python -c "
+import json, pathlib
+lines = pathlib.Path('logs/query_log.jsonl').read_text().splitlines()
+print([json.loads(l)['question'] for l in lines if json.loads(l)['failed']])
+"
+```
+
+---
+
+## Enabling logging in ask()
+
+Pass a `log_path` to `ask()` and logging happens automatically:
+
+```python
+from rag.query import ask
+
+result = ask(chain, "What is the overnight rate?", log_path="logs/query_log.jsonl")
+# The query is now in the log, with failed=True/False set automatically.
+```
+
+Or call `log_query()` directly if you want finer control:
+
+```python
+from rag.logger import log_query
+
+log_query(question, result["answer"], result["sources"], path="logs/query_log.jsonl")
+```
+
+---
+
+## Replaying failed queries
+
+After a pipeline improvement (new chunk size, better retrieval k, prompt tweak), load
+only the failed entries and re-run them to confirm the fix:
+
+```python
+from rag.logger import replay_failed
+from rag.query import ask
+
+failed = replay_failed("logs/query_log.jsonl")
+for entry in failed:
+    new_result = ask(chain, entry["question"])
+    improved = entry["question"] not in new_result["answer"]  # rough heuristic
+    print(f"{'FIXED' if improved else 'STILL FAILING'}: {entry['question']}")
+```
+
+---
+
+## API reference
+
+| Function | Purpose |
+|----------|---------|
+| `is_failed_query(answer)` | Returns `True` if answer contains the "I don't know" sentinel |
+| `log_query(question, answer, sources, path)` | Append one entry to the JSONL log |
+| `load_log(path)` | Read the full log back as a list of dicts |
+| `replay_failed(path)` | Return only entries where `failed == True` |
+
+Tests: `tests/test_logger.py` — 18 unit tests, all CI-safe (no Ollama required).
