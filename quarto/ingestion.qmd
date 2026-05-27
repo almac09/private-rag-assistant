@@ -12,6 +12,7 @@ is produced by the live `rag.ingest` module — not hardcoded.
 
 Related issues: [#1 Load CSV](https://github.com/almac09/private-rag-assistant/issues/1)
 (closed), [#2 Chunk documents](https://github.com/almac09/private-rag-assistant/issues/2)
+(closed), [#3 Embed and store in ChromaDB](https://github.com/almac09/private-rag-assistant/issues/3)
 (closed).
 
 ---
@@ -127,11 +128,84 @@ print(f"Metadata: {json.dumps(c.metadata, indent=2)}")
 
 ---
 
-## What this enables
+## Step 3 — Embed chunks and store in ChromaDB
 
-With `load_speeches_csv()` and `chunk_documents()` working, the next phase
-can embed these chunks using Ollama (`nomic-embed-text`) and store them in
-ChromaDB — enabling semantic similarity search over the full speeches corpus.
+`ingest_to_chromadb()` is the end-to-end function: it calls Steps 1 and 2
+internally, then embeds every chunk using Ollama (`nomic-embed-text`) and
+writes them to a local ChromaDB collection.
 
-See [Phase 1 issue #3](https://github.com/almac09/private-rag-assistant/issues/3)
-— Embed chunks and store in ChromaDB.
+Because Ollama is not available at render time, the cell below uses the same
+mock strategy as `tests/test_ingest.py` — replacing `OllamaEmbeddings` and
+`Chroma` with lightweight fakes so the pipeline logic can be demonstrated
+without a running model.
+
+```{python}
+from unittest.mock import MagicMock, patch
+
+# Fake embedding: returns a 4-dim vector for any text (real model uses 768-dim)
+class FakeEmbeddings:
+    def embed_documents(self, texts):
+        return [[0.1, 0.2, 0.3, 0.4]] * len(texts)
+    def embed_query(self, text):
+        return [0.1, 0.2, 0.3, 0.4]
+
+mock_vectorstore = MagicMock()
+mock_vectorstore.__len__ = lambda self: len(chunks)
+
+with patch("rag.ingest.OllamaEmbeddings", return_value=FakeEmbeddings()), \
+     patch("rag.ingest.Chroma.from_documents", return_value=mock_vectorstore), \
+     patch("os.makedirs"):
+    from rag.ingest import ingest_to_chromadb
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="") as f:
+        SAMPLE.to_csv(f, index=False)
+        tmp_path = f.name
+    vs = ingest_to_chromadb(tmp_path, chroma_dir="/tmp/demo_chroma")
+    os.unlink(tmp_path)
+```
+
+### What gets stored
+
+```{python}
+print(f"Chunks embedded and stored : {len(chunks)}")
+print(f"ChromaDB collection        : ecb_speeches")
+print(f"Embedding model            : nomic-embed-text (768-dim, via Ollama)")
+print(f"Embedding dims (mock)      : 4  (real model: 768)")
+print()
+print("Each stored document contains:")
+print("  • page_content  — the chunk text (≤1000 chars by default)")
+print("  • metadata      — speaker, date, title, source file, row index")
+```
+
+### Pipeline summary
+
+```{python}
+display(HTML(
+    "<table style='width:100%;border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th style='text-align:left;padding:6px'>Step</th>"
+    "<th style='text-align:left;padding:6px'>Function</th>"
+    "<th style='text-align:left;padding:6px'>Input → Output</th>"
+    "</tr></thead>"
+    "<tbody>"
+    "<tr><td style='padding:6px'>1</td><td><code>load_speeches_csv()</code></td>"
+    "<td>CSV rows → LangChain Documents</td></tr>"
+    "<tr><td style='padding:6px'>2</td><td><code>chunk_documents()</code></td>"
+    "<td>Documents → overlapping chunks (metadata preserved)</td></tr>"
+    "<tr><td style='padding:6px'>3</td><td><code>ingest_to_chromadb()</code></td>"
+    "<td>Chunks → embeddings → ChromaDB collection</td></tr>"
+    "<tr><td style='padding:6px'>—</td><td><code>load_chromadb()</code></td>"
+    "<td>Disk → Chroma instance (for query phase)</td></tr>"
+    "</tbody></table>"
+))
+```
+
+---
+
+## Phase 1 complete
+
+All three ingestion steps are implemented, tested, and demonstrated above.
+The ChromaDB collection (`ecb_speeches`) is ready for the Phase 2 query
+pipeline — retrieval + generation.
+
+See [Phase 2 issues #5–8](https://github.com/almac09/private-rag-assistant/issues/5).
