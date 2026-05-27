@@ -114,3 +114,58 @@ def test_real_csv_chunking():
     chunks = chunk_documents(docs, chunk_size=500, chunk_overlap=50)
     assert len(chunks) > len(docs)
     assert all("speakers" in c.metadata for c in chunks)
+
+
+# ---------------------------------------------------------------------------
+# Issue #4 — Chunk quality spot-checks
+# ---------------------------------------------------------------------------
+
+def test_chunk_quality_no_empty_chunks(sample_csv):
+    """No chunk should be empty or whitespace-only."""
+    docs = load_speeches_csv(str(sample_csv))
+    chunks = chunk_documents(docs, chunk_size=100, chunk_overlap=10)
+    empty = [c for c in chunks if not c.page_content.strip()]
+    assert not empty, f"{len(empty)} empty chunk(s) found"
+
+
+def test_chunk_quality_minimum_length(sample_csv):
+    """All chunks should be at least 10 characters (no degenerate splits)."""
+    docs = load_speeches_csv(str(sample_csv))
+    chunks = chunk_documents(docs, chunk_size=100, chunk_overlap=10)
+    short = [c for c in chunks if len(c.page_content.strip()) < 10]
+    assert not short, f"{len(short)} chunk(s) shorter than 10 chars"
+
+
+def test_chunk_quality_metadata_preserved(sample_csv):
+    """Every chunk must carry the full set of required metadata keys."""
+    required = {"date", "year", "speakers", "title", "source"}
+    docs = load_speeches_csv(str(sample_csv))
+    chunks = chunk_documents(docs, chunk_size=100, chunk_overlap=10)
+    for chunk in chunks:
+        missing = required - chunk.metadata.keys()
+        assert not missing, f"Chunk missing metadata keys: {missing}"
+
+
+def test_chunk_quality_respects_chunk_size(sample_csv):
+    """No chunk should significantly exceed the requested chunk_size."""
+    chunk_size = 200
+    docs = load_speeches_csv(str(sample_csv))
+    chunks = chunk_documents(docs, chunk_size=chunk_size, chunk_overlap=20)
+    oversized = [c for c in chunks if len(c.page_content) > chunk_size * 1.1]
+    assert not oversized, f"{len(oversized)} chunk(s) exceed chunk_size by >10%"
+
+
+@real_data
+def test_real_chunk_quality():
+    """Spot-check chunk quality against the real ECB speeches corpus."""
+    docs = load_speeches_csv(str(REAL_CSV))[:20]
+    chunks = chunk_documents(docs, chunk_size=1000, chunk_overlap=200)
+
+    empty = [c for c in chunks if not c.page_content.strip()]
+    short = [c for c in chunks if len(c.page_content.strip()) < 10]
+    required = {"date", "year", "speakers", "title", "source"}
+    bad_meta = [c for c in chunks if required - c.metadata.keys()]
+
+    assert not empty, f"{len(empty)} empty chunks in real corpus"
+    assert not short, f"{len(short)} degenerate chunks in real corpus"
+    assert not bad_meta, f"{len(bad_meta)} chunks with missing metadata"
