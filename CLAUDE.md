@@ -128,6 +128,17 @@ git add test-results.json
 site always shows the results from the last commit — no pytest step needed in
 the publish workflow.
 
+**Before every push, loop through all Quarto files and check for staleness:**
+
+For each file in `quarto/`:
+- Does the phase table / status text still match the current state of the codebase?
+- Are all issue links correct and marked closed where appropriate?
+- Does `index.qmd` reflect the current phase completion status?
+- Does `_quarto.yml` include every `.qmd` file that exists?
+
+Fix anything stale before staging. This keeps the published site accurate without
+needing a separate "docs update" PR on every merge.
+
 **Rule of thumb:** if a check needs Ollama, the real CSV, or a browser, it's local. Everything
 else should pass in CI. Never merge to `main` without running `quarto preview` locally first —
 there is no way to preview the published site before it goes live.
