@@ -42,12 +42,15 @@ Two goals, equal weight:
 
 Nothing leaves the laptop.
 
-## The approach — 4 phases
+## The approach — 5 phases
 
-1. **Baseline** — no documents; watch it fail cleanly
-2. **Single document** — one PDF; see what changes
-3. **Expanded KB** — all course PDFs; watch for new problems
-4. **Evaluation** — RAGAS scores + honest write-up
+| Phase | Goal | Status |
+|-------|------|--------|
+| 0 | Repo setup + hello world | ✅ Complete |
+| 1 | Document ingestion | ✅ Complete |
+| 2 | RAG query pipeline | ✅ Complete |
+| 3 | Evaluation harness (RAGAS) | ✅ Complete |
+| 4 | Feedback + confidence | In progress |
 
 ## Evaluation design
 
@@ -68,9 +71,15 @@ Wrapped in **pytest** so regressions show up like broken unit tests.
 
 None of these are reasons not to proceed — they shape how results are presented.
 
+## What's built
+
+- **Query logging** — every RAG call appended to JSONL; failed queries flagged for replay
+- **Confidence signal** — `is_uncertain`, `n_sources`, `unique_documents` on every `ask()` call
+- **Sphinx HTML docs** — autodoc from `rag/` module, zero-warning build
+- **RAGAS evaluation** — 20-question gold-standard test set; 4 metrics per run
+
 ## What's next
 
-- Complete Phases 1–4
-- Record and replay failure cases (the missing piece from the original pilot)
-- Surface a confidence signal to the user
-- Write a plain-English one-pager for non-technical stakeholders
+- Run RAGAS evaluation with real CBI speeches corpus loaded
+- Enterprise deployment writeup (Phase 5)
+- Plain-English one-pager for non-technical stakeholders

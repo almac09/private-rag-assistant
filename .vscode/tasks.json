@@ -183,18 +183,25 @@
             }
         },
         {
-            "label": "10. Sphinx-build Docs (docx)",
+            "label": "10. Quarto Render Report (docx)",
             "type": "process",
-            "command": ".venv\\Scripts\\sphinx-build.exe",
+            "command": "quarto.exe",
             "args": [
-                "-b", "docx",   // This specifies the builder (docx in this case)
-                "docs\\_source",// The source directory containing your reStructuredText files (usually `source`)
-                "docs\\_build"  // The directory where the output will be placed (usually `build`)
+                "render",
+                "quarto/report.qmd",
+                "--to", "docx",
+                "--output-dir", "docs/_build"
             ],
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
             }
         },
         {

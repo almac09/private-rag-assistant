@@ -1,0 +1,138 @@
+---
+title: "Sphinx Documentation Build"
+subtitle: "Verifying HTML autodoc and Word export"
+date: today
+date-format: "DD MMMM YYYY HH:mm"
+---
+
+## What this page covers
+
+Issues [#15](https://github.com/almac09/private-rag-assistant/issues/15) and
+[#16](https://github.com/almac09/private-rag-assistant/issues/16) verify that the
+`rag/` Python module can be built into readable documentation using Sphinx, and that
+a Word version of the project report can be exported for submission.
+
+---
+
+## HTML build — Sphinx autodoc
+
+Sphinx reads the docstrings in `rag/ingest.py`, `rag/query.py`, `rag/evaluate.py`,
+and `rag/logger.py` and renders them as cross-linked HTML documentation.
+
+**How to build:**
+
+```bash
+sphinx-build -b html docs/_source docs/_build/html
+```
+
+**Output:** `docs/_build/html/index.html`
+
+The build uses:
+
+| Extension | Purpose |
+|-----------|---------|
+| `myst_parser` | Parses Markdown source files (`.md`) |
+| `sphinx.ext.autodoc` | Pulls docstrings from Python modules |
+| `sphinx.ext.viewcode` | Adds "view source" links to each function |
+| `sphinx_rtd_theme` | Read the Docs visual theme |
+
+**Install dependencies:**
+
+```bash
+uv sync   # myst-parser and sphinx-rtd-theme are in pyproject.toml
+```
+
+---
+
+## Word export — Quarto render
+
+The Sphinx ecosystem does not have a maintained docx builder compatible with
+current Sphinx versions. The project report (`quarto/report.qmd`) is exported
+to Word via Quarto, which uses Pandoc internally and produces clean, fully
+formatted Word documents.
+
+**How to build:**
+
+```bash
+quarto render quarto/report.qmd --to docx --output-dir docs/_build
+```
+
+**Output:** `docs/_build/report.docx`
+
+This is also available as **VS Code Task 10 — Quarto Render Report (docx)**.
+
+---
+
+## Autodoc output preview
+
+```{python}
+#| code-fold: false
+import inspect
+import rag.query as q
+
+# Show the public API extracted by sphinx autodoc
+public_fns = [(name, obj) for name, obj in inspect.getmembers(q, inspect.isfunction)
+              if not name.startswith("_")]
+
+for name, fn in public_fns:
+    sig = inspect.signature(fn)
+    doc_first_line = (inspect.getdoc(fn) or "").split("\n")[0]
+    print(f"rag.query.{name}{sig}")
+    print(f"  {doc_first_line}")
+    print()
+```
+
+```{python}
+import rag.logger as lg
+
+public_fns = [(name, obj) for name, obj in inspect.getmembers(lg, inspect.isfunction)
+              if not name.startswith("_")]
+
+for name, fn in public_fns:
+    sig = inspect.signature(fn)
+    doc_first_line = (inspect.getdoc(fn) or "").split("\n")[0]
+    print(f"rag.logger.{name}{sig}")
+    print(f"  {doc_first_line}")
+    print()
+```
+
+---
+
+## Build status
+
+```{python}
+import subprocess, sys
+
+def check_sphinx():
+    result = subprocess.run(
+        [sys.executable, "-c", "import sphinx; print(sphinx.__version__)"],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip() if result.returncode == 0 else "not installed"
+
+def check_myst():
+    result = subprocess.run(
+        [sys.executable, "-c", "import myst_parser; print(myst_parser.__version__)"],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip() if result.returncode == 0 else "not installed"
+
+print(f"Sphinx version   : {check_sphinx()}")
+print(f"myst-parser      : {check_myst()}")
+print(f"Output directory : docs/_build/html/")
+print(f"Word export      : docs/_build/report.docx")
+print(f"Build command    : sphinx-build -b html docs/_source docs/_build/html")
+```
+
+---
+
+## Note on Sphinx docx builders
+
+The `sphinxcontrib-docxbuilder` package listed in the original `pyproject.toml`
+does not exist on PyPI. The alternative `sphinx-docxbuilder` package (2019) is
+incompatible with Sphinx 7+. Word export is therefore handled by Quarto/Pandoc,
+which produces better output and requires no additional dependencies beyond Quarto
+itself.
+
+The `sphinxcontrib-docxbuilder` entry has been removed from `pyproject.toml` and
+from `docs/_source/conf.py`. The VS Code task has been updated accordingly.
