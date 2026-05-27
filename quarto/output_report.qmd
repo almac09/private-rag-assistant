@@ -1,0 +1,26 @@
+---
+title: "Project Report"
+subtitle: "Building a RAG System I Can Explain — Completion"
+author: "Alan McDonagh (A00052777)"
+date: today
+date-format: "DD MMMM YYYY"
+---
+
+```{python}
+#| echo: false
+# Render the completion report from the Sphinx source markdown
+import pathlib
+content = pathlib.Path("../docs/_source/output_report.md").read_text(encoding="utf-8")
+# Strip the H1 title (rendered by Quarto YAML) and the first horizontal rule
+lines = content.split("\n")
+body_lines = []
+skip_next_blank = False
+found_first_rule = False
+for line in lines[1:]:  # skip the H1
+    if line.strip() == "---" and not found_first_rule:
+        found_first_rule = True
+        continue
+    body_lines.append(line)
+from IPython.display import Markdown
+Markdown("\n".join(body_lines))
+```

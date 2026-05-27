@@ -1,5 +1,5 @@
 ---
-title: "Project Report"
+title: "Project Initiation Report"
 subtitle: "Building a RAG System I Can Explain"
 author: "Alan McDonagh (A00052777)"
 date: today
