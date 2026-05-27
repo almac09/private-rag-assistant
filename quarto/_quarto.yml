@@ -19,6 +19,8 @@ website:
         text: Test Results
       - href: github_workflow.qmd
         text: GitHub Workflow
+      - href: rag_testing_methodology.qmd
+        text: RAG Testing Methodology
 
 format:
   html:

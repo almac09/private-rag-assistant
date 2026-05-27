@@ -15,9 +15,14 @@ to see updated results.
 Run tests with:
 
 ```powershell
-# From VS Code task: 14. Pytest - Setup Tests
-# Or from the command line (run from repo root):
+# Run all tests and save results (from repo root):
+pytest tests/ -v --json-report --json-report-file=test-results.json
+
+# Setup/environment checks only (requires Ollama running):
 pytest tests/test_setup.py -v --json-report --json-report-file=test-results.json
+
+# Ingestion pipeline tests only (no Ollama needed):
+pytest tests/test_ingest.py -v --json-report --json-report-file=test-results.json
 ```
 
 ---
@@ -120,7 +125,7 @@ else:
 
 ## Test categories
 
-The test suite in `tests/test_setup.py` covers five areas:
+### `tests/test_setup.py` — environment checks (local only, requires Ollama)
 
 | Class | What it checks |
 |-------|----------------|
@@ -129,6 +134,19 @@ The test suite in `tests/test_setup.py` covers five areas:
 | `TestOllamaModels` | Default model (`OLLAMA_MODEL` env var) downloaded |
 | `TestLLMProviders` | Ollama required; OpenAI / Anthropic / Gemini optional |
 | `TestEnvironment` | Python ≥ 3.11, `.env` exists, required directories present |
+
+### `tests/test_ingest.py` — ingestion pipeline (runs in CI, mocked dependencies)
+
+| Test | What it checks |
+|------|----------------|
+| `test_load_speeches_csv` | CSV loads and converts to LangChain Documents with correct metadata |
+| `test_chunk_documents` | Chunks preserve metadata and produce more chunks than source documents |
+| `test_ingest_to_chromadb` | End-to-end ingestion with mocked Ollama and ChromaDB |
+| `test_ingest_to_chromadb_missing_file` | Raises `FileNotFoundError` on missing CSV |
+| `test_ingest_to_chromadb_empty_csv` | Raises `ValueError` on empty CSV |
+| `test_real_csv_loads` | *(local only)* Real ECB CSV loads >100 speeches |
+| `test_real_csv_metadata_shape` | *(local only)* First 10 real speeches have required metadata keys |
+| `test_real_csv_chunking` | *(local only)* First 5 real speeches chunk correctly |
 
 ## Troubleshooting
 

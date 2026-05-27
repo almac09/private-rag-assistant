@@ -56,8 +56,26 @@ private-rag-assistant/
 ## Key constraints
 
 - **Nothing leaves the laptop.** Ollama is the primary LLM; cloud providers only if API key present.
-- **Knowledge base = course PDFs only** (no EIOPA/CBI external sources in this project).
+- **Knowledge base = CBI speeches corpus** (lecturer advised against course slide PDFs — they are slide decks designed to accompany spoken delivery; extracted text is too thin for good retrieval. Use the Central Bank of Ireland speeches dataset supplied with the course instead).
 - **Scope is deliberately small.** Don't add features beyond what the current phase needs.
+
+## Meta-AI tracking strand
+
+This project has a second deliverable beyond the RAG pipeline: a **meta-analysis of AI-assisted project management**. GitHub issues, milestones, branches, and PRs are created via Claude Code and GitHub Copilot under human direction, mirroring professional engineering governance. Keep commit messages and issue bodies high-quality — they are evidence for the meta-analysis and the AI Tools appendix.
+
+### Separating AI commits from human commits
+
+Claude Code appends `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` to every commit it creates. To filter:
+
+```powershell
+# Commits with AI involvement
+git log --grep="Co-Authored-By: Claude"
+
+# Commits by Alan only
+git log --invert-grep --grep="Co-Authored-By"
+```
+
+The co-author line also makes Claude appear as a named contributor in GitHub's contributor graph — useful evidence for the meta-analysis.
 
 ## Running things
 

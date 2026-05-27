@@ -1,44 +1,156 @@
-"""Document ingestion pipeline: load PDFs, chunk, embed, store in ChromaDB."""
+"""
+Document ingestion pipeline: load ECB speeches CSV, chunk, embed, and store in ChromaDB.
+"""
 
-from __future__ import annotations
-
+import os
 from pathlib import Path
+from typing import Optional
+import pandas as pd
+
+import chromadb
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
 
 
-def load_pdfs(source_dir: str | Path) -> list:
-    """Load all PDFs from *source_dir* using LangChain's PyPDFLoader.
+def load_speeches_csv(csv_path: str) -> list:
+    """
+    Load ECB speeches from CSV and convert to LangChain Document objects.
 
     Args:
-        source_dir: Directory containing PDF files.
+        csv_path: Path to ECB speeches CSV (columns: date, year, speakers, title,
+                  subtitle, contents).
 
     Returns:
-        List of LangChain Document objects, one per page.
+        List of LangChain Document objects with metadata.
     """
-    raise NotImplementedError("Phase 1 — implement in notebooks/01_ingest.ipynb first")
+    df = pd.read_csv(csv_path)
+    documents = []
+
+    for idx, row in df.iterrows():
+        # Use speech contents as page_content
+        page_content = row.get("contents", "")
+        if not page_content or pd.isna(page_content):
+            continue
+
+        # Attach all metadata
+        metadata = {
+            "date": str(row.get("date", "")),
+            "year": str(row.get("year", "")),
+            "speakers": str(row.get("speakers", "")),
+            "title": str(row.get("title", "")),
+            "subtitle": str(row.get("subtitle", "")),
+            "source": csv_path,
+            "row_index": idx,
+        }
+
+        doc = Document(page_content=page_content, metadata=metadata)
+        documents.append(doc)
+
+    return documents
 
 
-def chunk_documents(documents: list, chunk_size: int = 1000, chunk_overlap: int = 200) -> list:
-    """Split documents into overlapping text chunks.
+def chunk_documents(
+    documents: list,
+    chunk_size: int = 1000,
+    chunk_overlap: int = 200,
+) -> list:
+    """
+    Split documents into chunks using recursive character splitter.
 
     Args:
         documents: List of LangChain Document objects.
-        chunk_size: Target characters per chunk.
-        chunk_overlap: Characters of overlap between consecutive chunks.
+        chunk_size: Characters per chunk.
+        chunk_overlap: Overlap between chunks.
 
     Returns:
-        List of chunked Document objects.
+        List of chunked Document objects (metadata preserved).
     """
-    raise NotImplementedError("Phase 1")
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", " ", ""],
+    )
+    return splitter.split_documents(documents)
 
 
-def build_vectorstore(chunks: list, persist_dir: str | Path = "chroma_db") -> object:
-    """Embed chunks with Ollama nomic-embed-text and persist to ChromaDB.
+def ingest_to_chromadb(
+    csv_path: str,
+    chroma_dir: str = "./chroma_db",
+    ollama_model: str = "nomic-embed-text",
+    chunk_size: int = 1000,
+    chunk_overlap: int = 200,
+) -> Chroma:
+    """
+    End-to-end ingestion: load ECB speeches CSV → chunk → embed → store in ChromaDB.
 
     Args:
-        chunks: Chunked Document objects from :func:`chunk_documents`.
-        persist_dir: Directory for ChromaDB persistence.
+        csv_path: Path to ECB speeches CSV file.
+        chroma_dir: Where to persist ChromaDB.
+        ollama_model: Embedding model (must be running in Ollama).
+        chunk_size: Characters per chunk.
+        chunk_overlap: Overlap between chunks.
 
     Returns:
-        ChromaDB vectorstore instance.
+        Chroma vector store instance.
+
+    Raises:
+        FileNotFoundError: If csv_path doesn't exist.
+        ValueError: If CSV is empty or malformed.
+        Exception: If Ollama is not reachable.
     """
-    raise NotImplementedError("Phase 1")
+    csv_file = Path(csv_path)
+    if not csv_file.exists():
+        raise FileNotFoundError(f"CSV file not found: {csv_path}")
+
+    print(f"Loading ECB speeches from {csv_path}...")
+    documents = load_speeches_csv(csv_path)
+    if not documents:
+        raise ValueError(f"No valid speeches found in {csv_path}")
+    print(f"Loaded {len(documents)} speeches.")
+
+    print("Chunking documents...")
+    chunks = chunk_documents(documents, chunk_size, chunk_overlap)
+    print(f"Created {len(chunks)} chunks.")
+
+    print(f"Initializing Ollama embeddings ({ollama_model})...")
+    embeddings = OllamaEmbeddings(model=ollama_model)
+
+    print("Embedding and storing in ChromaDB...")
+    os.makedirs(chroma_dir, exist_ok=True)
+    vectorstore = Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=chroma_dir,
+        collection_name="ecb_speeches",
+    )
+    vectorstore.persist()
+    print(f"Ingestion complete. ChromaDB persisted to {chroma_dir}")
+    print(f"  Total chunks: {len(chunks)}")
+    print(f"  Collection: ecb_speeches")
+
+    return vectorstore
+
+
+def load_chromadb(
+    chroma_dir: str = "./chroma_db",
+    ollama_model: str = "nomic-embed-text",
+) -> Chroma:
+    """
+    Load an existing ChromaDB vector store.
+
+    Args:
+        chroma_dir: Path to persisted ChromaDB.
+        ollama_model: Embedding model (must match the one used during ingestion).
+
+    Returns:
+        Chroma vector store instance.
+    """
+    embeddings = OllamaEmbeddings(model=ollama_model)
+    vectorstore = Chroma(
+        persist_directory=chroma_dir,
+        embedding_function=embeddings,
+        collection_name="ecb_speeches",
+    )
+    return vectorstore

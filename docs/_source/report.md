@@ -181,6 +181,40 @@ Ollama Documentation. (2026). Retrieved May 2026 from https://ollama.com/docs
 
 ---
 
+## Appendix II: Lecturer Feedback — Amendments and Clarifications
+
+*Received from lecturer, May 2026. This appendix records the feedback and how it has been incorporated into the project.*
+
+---
+
+### A. Meta-use of AI as a second deliverable
+
+The lecturer noted that the project has two distinct strands worth presenting as separate contributions. The first strand — building and evaluating the RAG pipeline — is already the main subject of this report. The second strand, which the lecturer felt deserves equal recognition, is the **meta-level use of AI**: using Claude Code, GitHub Copilot, and automated agents to manage the project itself — raising GitHub issues, creating milestones, generating commit history, and maintaining structured documentation — in a way that mirrors how a professional might govern a real engineering engagement.
+
+This second strand has direct professional value. Managing a software project via structured issues, branches, and pull requests — whether authored by a human or an AI acting under human direction — is a transferable skill. Demonstrating that an AI assistant can carry out the mechanics of project governance (issue triage, branch strategy, commit conventions), while the human retains the decision-making authority and the audit trail, is a meaningful contribution in its own right, particularly for an actuarial audience who may be asked to oversee AI-assisted work without writing any of the code themselves.
+
+The meta-analysis will be documented separately in a project log (see `log_AI/`) and summarised in the AI Tools appendix of the final submission.
+
+---
+
+### B. Knowledge base: CBI speeches dataset instead of course slides
+
+The course PDFs are slide decks designed to accompany a live lecture. Extracted as plain text, they lose the verbal explanations that give each bullet point its meaning — a RAG system working from them would retrieve fragments that are grammatically complete but contextually thin. The lecturer advised against using them as the primary knowledge base and suggested instead using **the dataset of Central Bank of Ireland (CBI) speeches** that was supplied as part of the course materials.
+
+The CBI speeches are full-text documents: arguments are complete, terminology is used in context, and the corpus covers a domain (financial regulation) that is directly relevant to the professional background motivating this project. This substitution makes the knowledge base substantially richer and makes the evaluation more meaningful — answers can be checked against real, complete statements rather than slide fragments.
+
+This decision supersedes the original plan in §2.1. The data preparation steps (loading, chunking, embedding) are unchanged; only the source documents differ. Where this report refers to "course PDFs", that should be read as "the CBI speeches corpus" from Phase 1 onwards.
+
+---
+
+### C. RAG testing methodology
+
+The lecturer emphasised that evaluation should be approached in a structured, reproducible way rather than run ad hoc. As the project moves into Phases 2–4, each evaluation cycle needs to be set up so that someone reading the outputs can see exactly what was asked, what was retrieved, what was generated, and how the scores were computed — with no black boxes.
+
+A separate Quarto page ([RAG Testing Methodology](../quarto/rag_testing_methodology.qmd)) has been added to the project site to document the planned testing approach before any results are in. This covers: the test set design, the RAGAS metrics used and their limitations, the per-phase progression, and the conventions for recording both successes and failures. Settling this in advance reduces the temptation to adjust methodology in response to results.
+
+---
+
 ## Appendix I: Statement on Use of AI Tools
 
 I've used AI tools heavily in this project, and I want to be straightforward about how.
