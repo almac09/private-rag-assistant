@@ -1,7 +1,7 @@
 project:
   type: website
   title: "Building a RAG System I Can Explain"
-  output-dir: ../_quarto_site
+  output-dir: _site
 
 website:
   title: "RAG Assistant — Capstone"
