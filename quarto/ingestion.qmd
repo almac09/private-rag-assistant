@@ -13,6 +13,7 @@ is produced by the live `rag.ingest` module — not hardcoded.
 Related issues: [#1 Load CSV](https://github.com/almac09/private-rag-assistant/issues/1)
 (closed), [#2 Chunk documents](https://github.com/almac09/private-rag-assistant/issues/2)
 (closed), [#3 Embed and store in ChromaDB](https://github.com/almac09/private-rag-assistant/issues/3)
+(closed), [#4 Spot-check chunk quality](https://github.com/almac09/private-rag-assistant/issues/4)
 (closed).
 
 ---
@@ -198,6 +199,61 @@ display(HTML(
     "<td>Disk → Chroma instance (for query phase)</td></tr>"
     "</tbody></table>"
 ))
+```
+
+---
+
+## Step 4 — Spot-check chunk quality
+
+Before embedding, it is worth verifying that the chunks produced by Step 2
+are sensible: no empty splits, no degenerate micro-chunks, metadata intact,
+and lengths within the requested bounds. These checks are codified in
+`tests/test_ingest.py` and run on every push via CI.
+
+```{python}
+quality_checks = [
+    ("No empty chunks",            all(c.page_content.strip() for c in chunks)),
+    ("No chunks shorter than 10 chars", all(len(c.page_content.strip()) >= 10 for c in chunks)),
+    ("All required metadata keys present",
+        all({"date", "year", "speakers", "title", "source"} <= set(c.metadata) for c in chunks)),
+    ("No chunk exceeds chunk_size by >10%",
+        all(len(c.page_content) <= 100 * 1.1 for c in chunks)),
+]
+
+rows = "".join(
+    f"<tr><td>{'✅' if ok else '❌'}</td><td>{label}</td></tr>"
+    for label, ok in quality_checks
+)
+display(HTML(
+    "<table style='border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th style='padding:6px'>Result</th><th style='padding:6px;text-align:left'>Check</th>"
+    "</tr></thead><tbody>" + rows + "</tbody></table>"
+))
+```
+
+### Chunk length distribution
+
+```{python}
+lengths = [len(c.page_content) for c in chunks]
+bins = [0, 25, 50, 75, 100, 125]
+labels_bin = ["0–25", "26–50", "51–75", "76–100", "101+"]
+counts = [
+    sum(1 for l in lengths if bins[i] <= l < bins[i+1])
+    for i in range(len(bins)-1)
+]
+counts.append(sum(1 for l in lengths if l >= 125))
+
+max_count = max(counts) if counts else 1
+bars = "".join(
+    f"<tr><td style='padding:2px 8px'>{labels_bin[i]}</td>"
+    f"<td><div style='background:#4c8bf5;height:16px;width:{int(counts[i]/max_count*200)}px;"
+    f"border-radius:2px;min-width:2px'></div></td>"
+    f"<td style='padding:2px 8px'>{counts[i]} chunks</td></tr>"
+    for i in range(len(labels_bin))
+)
+display(HTML("<table style='border-collapse:collapse'>" + bars + "</table>"))
+print(f"Min: {min(lengths)} chars  |  Max: {max(lengths)} chars  |  Avg: {sum(lengths)/len(lengths):.0f} chars")
 ```
 
 ---
