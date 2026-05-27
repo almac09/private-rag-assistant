@@ -1,0 +1,255 @@
+---
+title: "Phase 2: Query Pipeline"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+This page demonstrates the query pipeline built in Phase 2. Every output is
+produced by the live `rag.query` module — not hardcoded. Because Ollama is not
+available at render time, the cells use the same mock strategy as
+`tests/test_query.py`, replacing `ChatOllama` and `ChromaDB` with lightweight
+fakes so the pipeline logic can be demonstrated without a running model.
+
+Related issues:
+[#5 Load vectorstore & build chain](https://github.com/almac09/private-rag-assistant/issues/5)
+(closed),
+[#6 Prompt template](https://github.com/almac09/private-rag-assistant/issues/6)
+(closed),
+[#7 ask() — answer + sources](https://github.com/almac09/private-rag-assistant/issues/7)
+(closed).
+
+---
+
+## Overview
+
+The query pipeline adds three functions on top of Phase 1's ingestion layer:
+
+| Function | Role |
+|----------|------|
+| `load_vectorstore()` | Re-opens the persisted ChromaDB collection for similarity search |
+| `build_rag_chain()` | Wires retriever → prompt → LLM into a single LCEL chain |
+| `ask()` | Runs a question through the chain; returns answer + cited sources |
+
+The chain retrieves the *k* most similar chunks from ChromaDB, injects them
+into a prompt that instructs the LLM to answer from context only, and returns
+the generated text alongside the metadata of every retrieved chunk so answers
+can always be traced back to a specific speech.
+
+---
+
+## Step 1 — Load the vectorstore
+
+`load_vectorstore()` wraps `rag.ingest.load_chromadb()` so callers in the
+query layer do not need to import from the ingest module directly.
+
+```{python}
+import sys
+sys.path.insert(0, "..")
+
+from unittest.mock import MagicMock, patch
+
+# Patch load_chromadb so we do not need an Ollama embedding model or real DB on disk
+with patch("rag.query.load_chromadb") as mock_load_chroma:
+    mock_vectorstore = MagicMock(name="ChromaVectorstore")
+    mock_load_chroma.return_value = mock_vectorstore
+
+    from rag.query import load_vectorstore
+    vs = load_vectorstore(persist_dir="./chroma_db", ollama_model="nomic-embed-text")
+
+    call = mock_load_chroma.call_args
+    print(f"load_vectorstore() called load_chromadb with:")
+    print(f"  chroma_dir   = {call.kwargs['chroma_dir']!r}")
+    print(f"  ollama_model = {call.kwargs['ollama_model']!r}")
+    print(f"Returned vectorstore : {type(vs).__name__}")
+```
+
+---
+
+## Step 2 — Build the RAG chain
+
+`build_rag_chain()` composes three components using LangChain Expression
+Language (LCEL):
+
+1. **Retriever** — similarity search over ChromaDB (top-*k* chunks)
+2. **Prompt** — injects retrieved context and constrains the LLM to it
+3. **LLM** — Ollama (`llama3.2` by default) generates the answer
+
+The chain uses `RunnableParallel` so that documents are retrieved **once** and
+then passed to both the prompt formatter and the source-citation output — no
+double round-trip to the vectorstore.
+
+```{python}
+with patch("rag.query.ChatOllama") as mock_ollama_cls:
+    mock_ollama_cls.return_value = MagicMock(name="ChatOllama")
+
+    mock_vs = MagicMock(name="vectorstore")
+    mock_vs.as_retriever.return_value = MagicMock(name="retriever")
+
+    from rag.query import build_rag_chain
+    chain = build_rag_chain(mock_vs, model="llama3.2", k=4)
+
+    print(f"Chain type   : {type(chain).__name__}")
+    print(f"Retriever configured with k=4: {mock_vs.as_retriever.call_args}")
+    print(f"ChatOllama instantiated with : {mock_ollama_cls.call_args}")
+```
+
+### Prompt template
+
+The prompt is intentionally restrictive — the LLM is told to answer *only*
+from the retrieved context and to say "I don't know" if the answer is absent.
+This keeps hallucination risk low for a local, closed-domain corpus.
+
+```{python}
+from rag.query import _PROMPT_TEMPLATE
+print(_PROMPT_TEMPLATE)
+```
+
+---
+
+## Step 3 — Ask a question
+
+`ask()` invokes the chain with a question string and reshapes the output into
+a simple `{"answer": str, "sources": [metadata dicts]}` dict that the rest of
+the application can consume without knowing LangChain internals.
+
+```{python}
+from langchain_core.documents import Document
+from rag.query import ask
+
+# Simulate what a real chain would return after retrieval + generation
+FAKE_DOCS = [
+    Document(
+        page_content=(
+            "The ECB reaffirmed its commitment to the 2% inflation target "
+            "and signalled that interest rates would remain at restrictive levels "
+            "for as long as necessary."
+        ),
+        metadata={
+            "speakers": "Christine Lagarde",
+            "title": "Monetary Policy Statement",
+            "date": "2023-09-14",
+            "year": "2023",
+            "source": "inputs/Data/all_ECB_speeches_csv.csv",
+        },
+    ),
+    Document(
+        page_content=(
+            "Core inflation has shown signs of easing but remains elevated. "
+            "The Governing Council will continue to follow a data-dependent approach."
+        ),
+        metadata={
+            "speakers": "Philip Lane",
+            "title": "The Inflation Outlook",
+            "date": "2023-10-02",
+            "year": "2023",
+            "source": "inputs/Data/all_ECB_speeches_csv.csv",
+        },
+    ),
+]
+
+mock_chain = MagicMock()
+mock_chain.invoke.return_value = {
+    "answer": (
+        "The ECB reaffirmed its commitment to the 2% inflation target and "
+        "signalled that rates would remain restrictive for as long as necessary. "
+        "Core inflation was easing but still elevated, and the Governing Council "
+        "adopted a data-dependent approach."
+    ),
+    "source_docs": FAKE_DOCS,
+    "question": "What is the ECB's current stance on inflation?",
+    "context": "\n\n".join(d.page_content for d in FAKE_DOCS),
+}
+
+QUESTION = "What is the ECB's current stance on inflation?"
+result = ask(mock_chain, QUESTION)
+
+print(f"Question : {QUESTION}")
+print()
+print(f"Answer   : {result['answer']}")
+```
+
+### Retrieved sources
+
+```{python}
+import json
+from IPython.display import HTML, display
+
+rows = "".join(
+    f"<tr>"
+    f"<td style='padding:4px 8px'>{i + 1}</td>"
+    f"<td style='padding:4px 8px'>{s['speakers']}</td>"
+    f"<td style='padding:4px 8px'>{s['date']}</td>"
+    f"<td style='padding:4px 8px'>{s['title']}</td>"
+    f"</tr>"
+    for i, s in enumerate(result["sources"])
+)
+
+display(HTML(
+    "<table style='width:100%;border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th style='padding:4px 8px'>#</th>"
+    "<th style='padding:4px 8px'>Speaker</th>"
+    "<th style='padding:4px 8px'>Date</th>"
+    "<th style='padding:4px 8px'>Title</th>"
+    "</tr></thead><tbody>" + rows + "</tbody></table>"
+))
+```
+
+### Full result structure
+
+```{python}
+# Show keys and types — content truncated for brevity
+print("result keys :", list(result.keys()))
+print("answer type :", type(result["answer"]).__name__)
+print("sources type:", type(result["sources"]).__name__, f"({len(result['sources'])} items)")
+print()
+print("sources[0]:")
+print(json.dumps(result["sources"][0], indent=2))
+```
+
+---
+
+## Step 4 — Pipeline summary
+
+```{python}
+display(HTML(
+    "<table style='width:100%;border-collapse:collapse'>"
+    "<thead><tr style='border-bottom:2px solid #dee2e6'>"
+    "<th style='text-align:left;padding:6px'>Step</th>"
+    "<th style='text-align:left;padding:6px'>Function</th>"
+    "<th style='text-align:left;padding:6px'>Input → Output</th>"
+    "</tr></thead>"
+    "<tbody>"
+    "<tr><td style='padding:6px'>1</td><td><code>load_vectorstore()</code></td>"
+    "<td>Disk path → Chroma instance (wraps <code>load_chromadb</code>)</td></tr>"
+    "<tr><td style='padding:6px'>2</td><td><code>build_rag_chain()</code></td>"
+    "<td>Vectorstore + model → LCEL chain (retriever → prompt → LLM)</td></tr>"
+    "<tr><td style='padding:6px'>3</td><td><code>ask()</code></td>"
+    "<td>Chain + question → <code>{answer, sources}</code></td></tr>"
+    "</tbody></table>"
+))
+```
+
+### Design notes
+
+- **Single retrieval**: `RunnableParallel` fetches chunks once and passes
+  them to both the prompt formatter and the source list — no double round-trip
+  to ChromaDB.
+- **Constrained prompt**: the LLM is instructed to answer from context only
+  and to say *"I don't know"* if the answer is absent, reducing hallucination
+  risk for this closed-domain corpus.
+- **Metadata pass-through**: `ask()` returns raw metadata dicts (not Document
+  objects) so callers get plain Python and do not need to import LangChain.
+
+---
+
+## Phase 2 complete
+
+The query pipeline (`load_vectorstore`, `build_rag_chain`, `ask`) is
+implemented, tested (13 unit tests, all CI-safe), and demonstrated above.
+The pipeline is ready for the Phase 3 evaluation harness — RAGAS metrics and
+a deterministic test set.
+
+See [Phase 3 issues](https://github.com/almac09/private-rag-assistant/issues).
