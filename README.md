@@ -1,5 +1,9 @@
 # private-rag-assistant
 
+[![Quarto Site](https://img.shields.io/badge/Quarto-Site-blue)](https://almac09.github.io/private-rag-assistant/)
+
+**Live documentation:** https://almac09.github.io/private-rag-assistant/
+
 ## Setup
 
 ### Prerequisites
