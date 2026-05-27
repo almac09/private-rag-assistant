@@ -211,7 +211,7 @@ This decision supersedes the original plan in §2.1. The data preparation steps 
 
 The lecturer emphasised that evaluation should be approached in a structured, reproducible way rather than run ad hoc. As the project moves into Phases 2–4, each evaluation cycle needs to be set up so that someone reading the outputs can see exactly what was asked, what was retrieved, what was generated, and how the scores were computed — with no black boxes.
 
-A separate Quarto page ([RAG Testing Methodology](../quarto/rag_testing_methodology.qmd)) has been added to the project site to document the planned testing approach before any results are in. This covers: the test set design, the RAGAS metrics used and their limitations, the per-phase progression, and the conventions for recording both successes and failures. Settling this in advance reduces the temptation to adjust methodology in response to results.
+A separate Quarto page ([RAG Testing Methodology](https://almac09.github.io/private-rag-assistant/rag_testing_methodology.html)) has been added to the project site to document the planned testing approach before any results are in. This covers: the test set design, the RAGAS metrics used and their limitations, the per-phase progression, and the conventions for recording both successes and failures. Settling this in advance reduces the temptation to adjust methodology in response to results.
 
 ---
 

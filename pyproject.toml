@@ -31,6 +31,8 @@ dependencies = [
     "textsplit>=0.1.0",
     "pandas>=2.0.0",
     "ollama>=0.1.0",
+    "myst-parser",
+    "sphinx-rtd-theme",
 ]
 
 [tool.hatch.build.targets.wheel]

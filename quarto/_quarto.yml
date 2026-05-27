@@ -1,4 +1,4 @@
-uarto project:
+project:
   type: website
   title: "Building a RAG System I Can Explain"
   output-dir: _site
@@ -39,6 +39,8 @@ website:
             text: Phase 4 — Confidence Signal
           - href: logging.qmd
             text: Phase 4 — Query Logging
+          - href: sphinx_docs.qmd
+            text: Sphinx Documentation Build
 
 format:
   html:

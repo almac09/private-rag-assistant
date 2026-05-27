@@ -12,7 +12,6 @@ extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
-    "sphinxcontrib.docxbuilder",
 ]
 
 source_suffix = {
