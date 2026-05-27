@@ -5,24 +5,34 @@ project:
 
 website:
   title: "RAG Assistant — Capstone"
-  navbar:
-    left:
+  sidebar:
+    style: "docked"
+    search: true
+    contents:
       - href: index.qmd
         text: Home
-      - href: report.qmd
-        text: Project Report
-      - href: evaluation.qmd
-        text: Evaluation Results
-      - href: presentation.qmd
-        text: Presentation
-      - href: ingestion.qmd
-        text: Phase 1 — Ingestion
-      - href: tests.qmd
-        text: Test Results
-      - href: github_workflow.qmd
-        text: GitHub Workflow
-      - href: rag_testing_methodology.qmd
-        text: RAG Testing Methodology
+      - section: "Project"
+        contents:
+          - href: report.qmd
+            text: Project Report
+          - href: evaluation.qmd
+            text: Evaluation Results
+          - href: presentation.qmd
+            text: Presentation
+      - section: "Pipeline"
+        contents:
+          - href: ingestion.qmd
+            text: Phase 1 — Ingestion
+          - href: query.qmd
+            text: Phase 2 — Query
+      - section: "Quality & Process"
+        contents:
+          - href: tests.qmd
+            text: Test Results
+          - href: github_workflow.qmd
+            text: GitHub Workflow
+          - href: rag_testing_methodology.qmd
+            text: RAG Testing Methodology
 
 format:
   html:

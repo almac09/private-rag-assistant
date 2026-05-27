@@ -4,34 +4,79 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_ollama import ChatOllama
 
-def load_vectorstore(persist_dir: str | Path = "chroma_db") -> object:
+from rag.ingest import load_chromadb
+
+
+_PROMPT_TEMPLATE = """\
+Answer the question using ONLY the context excerpts below.
+If the answer cannot be found in the context, reply: \
+"I don't know based on the available speeches."
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:"""
+
+
+def _format_docs(docs: list) -> str:
+    return "\n\n".join(d.page_content for d in docs)
+
+
+def load_vectorstore(
+    persist_dir: str | Path = "chroma_db",
+    ollama_model: str = "nomic-embed-text",
+):
     """Load an existing ChromaDB vectorstore from disk.
 
     Args:
-        persist_dir: Directory where ChromaDB was persisted.
+        persist_dir: Directory where ChromaDB was persisted by
+            :func:`rag.ingest.ingest_to_chromadb`.
+        ollama_model: Embedding model name (must match the model used at ingest time).
 
     Returns:
-        ChromaDB vectorstore instance.
+        ChromaDB vectorstore instance ready for similarity search.
     """
-    raise NotImplementedError("Phase 2")
+    return load_chromadb(chroma_dir=str(persist_dir), ollama_model=ollama_model)
 
 
-def build_rag_chain(vectorstore: object, model: str = "llama3.2", k: int = 4) -> object:
-    """Build a LangChain RAG chain using the given vectorstore.
+def build_rag_chain(vectorstore, model: str = "llama3.2", k: int = 4):
+    """Build a LangChain LCEL RAG chain.
+
+    The chain retrieves the top-*k* chunks most similar to the question, injects
+    them into a prompt that constrains the LLM to the retrieved context only, and
+    returns both the generated answer and the source documents — without hitting
+    the vectorstore twice.
 
     Args:
-        vectorstore: ChromaDB vectorstore with embedded course documents.
+        vectorstore: ChromaDB vectorstore (from :func:`load_vectorstore`).
         model: Ollama model name to use for generation.
         k: Number of chunks to retrieve per query.
 
     Returns:
-        LangChain runnable chain (invoke with ``{"question": "..."}``)
+        LangChain runnable — invoke with a question string; returns a dict with
+        keys ``answer`` (str), ``source_docs`` (list of Documents), ``context``
+        (str), and ``question`` (str).
     """
-    raise NotImplementedError("Phase 2")
+    retriever = vectorstore.as_retriever(search_kwargs={"k": k})
+    prompt = ChatPromptTemplate.from_template(_PROMPT_TEMPLATE)
+    llm = ChatOllama(model=model)
+
+    chain = (
+        RunnableParallel(source_docs=retriever, question=RunnablePassthrough())
+        .assign(context=lambda x: _format_docs(x["source_docs"]))
+        .assign(answer=prompt | llm | StrOutputParser())
+    )
+    return chain
 
 
-def ask(chain: object, question: str) -> dict:
+def ask(chain, question: str) -> dict:
     """Run a question through the RAG chain and return answer + sources.
 
     Args:
@@ -39,6 +84,11 @@ def ask(chain: object, question: str) -> dict:
         question: Natural-language question.
 
     Returns:
-        Dict with keys ``answer`` (str) and ``sources`` (list of chunk metadata dicts).
+        Dict with keys ``answer`` (str) and ``sources`` (list of metadata dicts,
+        one per retrieved chunk).
     """
-    raise NotImplementedError("Phase 2")
+    result = chain.invoke(question)
+    return {
+        "answer": result["answer"],
+        "sources": [doc.metadata for doc in result["source_docs"]],
+    }
