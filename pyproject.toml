@@ -6,10 +6,10 @@ authors = [{ name = "Alan McDonagh", email = "mcdonagh.alan09@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "langchain>=0.3",
-    "langchain-community>=0.3",
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
     "langchain-chroma>=0.2",
-    "chromadb>=0.5",
+    "chromadb>=0.4.0",
     "langchain-ollama>=0.2",
     "openai>=1.0",
     "anthropic>=0.30",
@@ -25,6 +25,12 @@ dependencies = [
     "black>=24.0",
     "ruff>=0.4",
     "sphinx",
+    "pydantic>=2.0,<3",
+    "pdfplumber>=0.1.1",
+    "sentence-transformers>=3.0",
+    "textsplit>=0.1.0",
+    "pandas>=2.0.0",
+    "ollama>=0.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]
