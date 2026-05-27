@@ -331,6 +331,41 @@
             "postDebugTask": "Open Quarto Index"
         },
         {
+            "label": "17. Start Ollama Server",
+            "type": "process",
+            "command": "ollama",
+            "args": ["serve"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "clear": true
+            },
+            "isBackground": true
+        },
+        {
+            "label": "18. RAG Environment Ready (Ollama check + ingest if needed)",
+            "type": "process",
+            "command": ".venv\\Scripts\\python.exe",
+            "args": ["scripts/ollama_ready.py"],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": false
+            }
+        },
+        {
             "label": "Open Quarto Index",
             "type": "process",
             "command": "Start-Process",
