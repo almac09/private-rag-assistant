@@ -5,6 +5,8 @@ author: "Alan McDonagh (A00052777)"
 date: today
 ---
 
+**Published site:** <https://almac09.github.io/private-rag-assistant/>
+
 ## About this project
 
 A local Retrieval-Augmented Generation (RAG) pipeline built to understand how RAG actually behaves —
@@ -25,7 +27,7 @@ where it works, where it fails, and how to evaluate and explain it honestly.
 | Phase | Goal | Status |
 |-------|------|--------|
 | 0 | Repo setup + hello world | ✅ Complete |
-| 1 | Document ingestion | ⬜ Not started |
+| 1 | Document ingestion | 🔄 In progress |
 | 2 | RAG query pipeline | ⬜ Not started |
 | 3 | Evaluation harness | ⬜ Not started |
 | 4 | Feedback + confidence | ⬜ Not started |
