@@ -105,6 +105,20 @@ Do not close an issue until all four are complete.
    - Which tests cover it
    - Which Quarto page demonstrates it
 
+## What runs locally vs what runs in CI
+
+| Check | Where it runs | When |
+|-------|--------------|------|
+| `pytest tests/test_ingest.py` | CI (GitHub Actions) + locally | On every push/PR automatically; run locally before pushing |
+| `pytest tests/test_setup.py` | **Local only** | Manually — requires Ollama running on `localhost:11434` |
+| `@real_data` smoke tests | **Local only** | Automatically skipped in CI; run locally when real CSV is present |
+| `quarto preview quarto/*.qmd` | **Local only** | Manually before merging — this is the review step for Quarto pages |
+| Quarto site publish | CI (GitHub Actions) | Automatically on merge to `main` only |
+
+**Rule of thumb:** if a check needs Ollama, the real CSV, or a browser, it's local. Everything
+else should pass in CI. Never merge to `main` without running `quarto preview` locally first —
+there is no way to preview the published site before it goes live.
+
 ## Running things
 
 ```powershell
