@@ -273,7 +273,6 @@
                 "kind": "test",
                 "isDefault": false
             },
-            "problemMatcher": ["$pytest"],
             "presentation": {
                 "reveal": "always",
                 "focus": true,
@@ -305,17 +304,15 @@
         {
             "label": "16. Render Quarto & Open Index",
             "type": "process",
-            "command": "quarto",
+            "command": "quarto.exe",
             "args": [
                 "render",
                 "quarto"
             ],
-            "windows": {
-                "command": "quarto.exe",
-                "args": [
-                    "render",
-                    "quarto"
-                ]
+            "options": {
+                "env": {
+                    "QUARTO_PYTHON": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+                }
             },
             "group": {
                 "kind": "build",
