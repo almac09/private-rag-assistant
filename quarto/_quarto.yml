@@ -1,4 +1,4 @@
-project:
+uarto project:
   type: website
   title: "Building a RAG System I Can Explain"
   output-dir: _site

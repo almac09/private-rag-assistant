@@ -54,7 +54,7 @@ def build_rag_chain(vectorstore, model: str = "llama3.2", k: int = 4):
 
     The chain retrieves the top-*k* chunks most similar to the question, injects
     them into a prompt that constrains the LLM to the retrieved context only, and
-    returns both the generated answer and the source documents — without hitting
+    returns both the generated answer and the source documents without hitting
     the vectorstore twice.
 
     Args:
@@ -63,7 +63,7 @@ def build_rag_chain(vectorstore, model: str = "llama3.2", k: int = 4):
         k: Number of chunks to retrieve per query.
 
     Returns:
-        LangChain runnable — invoke with a question string; returns a dict with
+        LangChain runnable. Invoke with a question string; returns a dict with
         keys ``answer`` (str), ``source_docs`` (list of Documents), ``context``
         (str), and ``question`` (str).
     """
@@ -82,9 +82,7 @@ def build_rag_chain(vectorstore, model: str = "llama3.2", k: int = 4):
 def confidence_signal(answer: str, sources: list[dict]) -> dict:
     """Return a lightweight confidence estimate based on answer text and retrieved sources.
 
-    No additional LLM calls are made — this is a heuristic only.  It is useful
-    for surfacing uncertainty to a user or logging system without the overhead of
-    a full RAGAS evaluation.
+    No additional LLM calls are made; this is a heuristic only.
 
     Signals:
 
@@ -116,22 +114,18 @@ def confidence_signal(answer: str, sources: list[dict]) -> dict:
 
 def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
     """Run a question through the RAG chain and return answer, sources, and confidence.
-def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
-    """Run a question through the RAG chain and return answer + sources.
 
     Args:
         chain: LangChain RAG chain from :func:`build_rag_chain`.
         question: Natural-language question.
         log_path: If provided, append the query result to this JSONL file via
-            :func:`rag.logger.log_query`.  Failed queries are flagged
+            :func:`rag.logger.log_query`. Failed queries are flagged
             automatically so they can be replayed later.
 
     Returns:
-        Dict with keys:
-
-        - ``answer`` (str) — generated answer.
-        - ``sources`` (list of dicts) — metadata for each retrieved chunk.
-        - ``confidence`` (dict) — lightweight signal from :func:`confidence_signal`.
+        Dict with keys ``answer`` (str), ``sources`` (list of metadata dicts,
+        one per retrieved chunk), and ``confidence`` (dict from
+        :func:`confidence_signal`).
     """
     result = chain.invoke(question)
     sources = [doc.metadata for doc in result["source_docs"]]
@@ -140,13 +134,9 @@ def ask(chain, question: str, *, log_path: str | Path | None = None) -> dict:
         "answer": answer,
         "sources": sources,
         "confidence": confidence_signal(answer, sources),
-    out = {
-        "answer": result["answer"],
-        "sources": [doc.metadata for doc in result["source_docs"]],
     }
     if log_path is not None:
         from rag.logger import log_query
 
         log_query(question, answer, sources, path=log_path)
-        log_query(question, out["answer"], out["sources"], path=log_path)
     return out
