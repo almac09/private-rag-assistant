@@ -40,6 +40,7 @@ def _make_mock_chain(answer="Inflation fell to 2.9% in December 2023.", n_docs=2
     chain.invoke.return_value = {
         "answer": answer,
         "source_docs": docs,
+        "scores": [0.85] * n_docs,
         "context": "Some speech context.",
         "question": "",
     }
@@ -67,8 +68,9 @@ def _app_test_with_mocks(chain=None, llm=None) -> AppTest:
         patch("rag.query.load_vectorstore", return_value=mock_vs),
         patch("rag.query.build_rag_chain", return_value=chain),
         patch("langchain_ollama.ChatOllama", return_value=llm),
-        # Mock the model list so the sidebar selectbox renders without calling Ollama
         patch("app._list_chat_models", return_value=["llama3.2:1b", "llama3:latest"]),
+        # Also patch _get_vectorstore so the new cached wrapper resolves cleanly
+        patch("app._get_vectorstore", return_value=mock_vs),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()
@@ -119,6 +121,21 @@ def test_app_handles_uncertain_answers():
     assert "is_uncertain" in src
 
 
+def test_app_has_mode_selector():
+    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "_MODES" in src or "Mode" in src
+
+
+def test_app_has_performance_timing():
+    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "perf_counter" in src
+
+
+def test_app_has_fallback_toggle():
+    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "fallback" in src.lower() and "use_fallback" in src
+
+
 # ---------------------------------------------------------------------------
 # Group 2: AppTest render tests (CI-safe — mocked resources)
 # ---------------------------------------------------------------------------
@@ -164,6 +181,7 @@ def test_app_shows_answers_after_question_submitted():
         patch("rag.query.build_rag_chain", return_value=chain),
         patch("langchain_ollama.ChatOllama", return_value=llm),
         patch("app._list_chat_models", return_value=["llama3.2:1b"]),
+        patch("app._get_vectorstore", return_value=mock_vs),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()
@@ -191,6 +209,7 @@ def test_app_shows_error_gracefully_when_resources_fail():
         patch("rag.query.load_vectorstore", side_effect=ConnectionError("Ollama not running")),
         patch("langchain_ollama.ChatOllama", side_effect=ConnectionError("Ollama not running")),
         patch("app._list_chat_models", return_value=["llama3.2:1b"]),
+        patch("app._get_vectorstore", side_effect=ConnectionError("Ollama not running")),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()
@@ -206,11 +225,19 @@ def test_app_shows_error_gracefully_when_resources_fail():
 # ---------------------------------------------------------------------------
 
 
-def _make_mock_chain_raw(answer="The inflation rate was 3%.", docs=None):
+def _make_mock_chain_raw(answer="The inflation rate was 3%.", docs=None, scores=None):
     if docs is None:
         docs = [_make_doc()]
+    if scores is None:
+        scores = [0.85] * len(docs)
     chain = MagicMock()
-    chain.invoke.return_value = {"answer": answer, "source_docs": docs, "context": "", "question": ""}
+    chain.invoke.return_value = {
+        "answer": answer,
+        "source_docs": docs,
+        "scores": scores,
+        "context": "",
+        "question": "",
+    }
     return chain
 
 
