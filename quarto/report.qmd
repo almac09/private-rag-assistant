@@ -3,7 +3,22 @@ title: "Project Initiation Report"
 subtitle: "Building a RAG System I Can Explain"
 author: "Alan McDonagh (A00052777)"
 date: today
-number-sections: true
+date-format: "DD MMMM YYYY"
+number-sections: false
 ---
 
-{{< include ../docs/_source/report.md >}}
+```{python}
+#| echo: false
+import pathlib
+content = pathlib.Path("../docs/_source/report.md").read_text(encoding="utf-8")
+lines = content.split("\n")
+body_lines = []
+in_body = False
+for line in lines:
+    if not in_body and line.startswith("## 1 "):
+        in_body = True
+    if in_body:
+        body_lines.append(line)
+from IPython.display import Markdown
+Markdown("\n".join(body_lines))
+```
