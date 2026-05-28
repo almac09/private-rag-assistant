@@ -27,22 +27,26 @@ def _make_doc(speaker="Christine Lagarde", title="Test Speech", content="ECB mon
     )
 
 
-def _make_mock_vectorstore(docs=None):
+def _make_mock_vectorstore(docs=None, score=0.85):
     if docs is None:
         docs = [_make_doc()]
     mock_vs = MagicMock()
-    mock_retriever = MagicMock()
-    mock_retriever.invoke = MagicMock(return_value=docs)
-    mock_vs.as_retriever.return_value = mock_retriever
+    # similarity_search_with_relevance_scores returns [(doc, score), ...]
+    mock_vs.similarity_search_with_relevance_scores.return_value = [
+        (doc, score) for doc in docs
+    ]
     return mock_vs
 
 
-def _mock_chain_result(answer="The ECB held rates steady.", docs=None):
+def _mock_chain_result(answer="The ECB held rates steady.", docs=None, scores=None):
     if docs is None:
         docs = [_make_doc()]
+    if scores is None:
+        scores = [0.85] * len(docs)
     return {
         "answer": answer,
         "source_docs": docs,
+        "scores": scores,
         "question": "What did the ECB do?",
         "context": "\n\n".join(d.page_content for d in docs),
     }
@@ -102,14 +106,57 @@ def test_build_rag_chain_returns_chain(mock_ollama):
 
 
 @patch("rag.query.ChatOllama")
-def test_build_rag_chain_configures_retriever(mock_ollama):
-    """build_rag_chain calls as_retriever with the correct k value."""
+def test_build_rag_chain_uses_similarity_search_with_scores(mock_ollama):
+    """build_rag_chain retrieves via similarity_search_with_relevance_scores, not as_retriever."""
     from rag.query import build_rag_chain
     mock_vs = _make_mock_vectorstore()
 
-    build_rag_chain(mock_vs, model="llama3.2", k=6)
+    chain = build_rag_chain(mock_vs, model="llama3.2", k=6)
 
-    mock_vs.as_retriever.assert_called_once_with(search_kwargs={"k": 6})
+    # Chain should exist; as_retriever is not called in the new implementation
+    assert chain is not None
+    mock_vs.as_retriever.assert_not_called()
+
+
+@patch("rag.query.ChatOllama")
+def test_build_rag_chain_passes_k_to_search(mock_ollama):
+    """build_rag_chain passes k to similarity_search_with_relevance_scores.
+
+    MagicMock is not a Runnable subclass so LCEL wraps it in RunnableLambda and
+    calls llm(input) — not llm.invoke(input). Set return_value.return_value so the
+    callable returns a proper AIMessage that StrOutputParser can handle.
+    """
+    from langchain_core.messages import AIMessage
+    from rag.query import build_rag_chain
+
+    mock_vs = _make_mock_vectorstore()
+    mock_ollama.return_value.return_value = AIMessage(content="Mocked answer.")
+
+    chain = build_rag_chain(mock_vs, k=7)
+    chain.invoke("test question")
+
+    mock_vs.similarity_search_with_relevance_scores.assert_called_once_with("test question", k=7)
+
+
+@patch("rag.query.ChatOllama")
+def test_build_rag_chain_filters_by_score_threshold(mock_ollama):
+    """Chunks below score_threshold are excluded from the retrieved set."""
+    from langchain_core.messages import AIMessage
+    from rag.query import build_rag_chain
+
+    mock_vs = MagicMock()
+    doc_high = _make_doc(content="High relevance.")
+    doc_low = _make_doc(content="Low relevance.")
+    mock_vs.similarity_search_with_relevance_scores.return_value = [
+        (doc_high, 0.9), (doc_low, 0.2),
+    ]
+    mock_ollama.return_value.return_value = AIMessage(content="Mocked answer.")
+
+    chain = build_rag_chain(mock_vs, score_threshold=0.5)
+    result = chain.invoke("Q?")
+
+    assert len(result["source_docs"]) == 1
+    assert result["source_docs"][0].page_content == "High relevance."
 
 
 @patch("rag.query.ChatOllama")
@@ -168,6 +215,57 @@ def test_confidence_signal_empty_sources():
     assert sig["n_sources"] == 0
     assert sig["has_sources"] is False
     assert sig["unique_documents"] == 0
+
+
+def test_confidence_signal_scores_populate_top_and_avg():
+    from rag.query import confidence_signal
+    sources = [{"source": "a.csv"}, {"source": "b.csv"}]
+    sig = confidence_signal("Answer.", sources, scores=[0.9, 0.7])
+    assert sig["top_score"] == 0.9
+    assert sig["avg_score"] == 0.8
+
+
+def test_confidence_signal_no_scores_gives_none():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [{"source": "a.csv"}])
+    assert sig["top_score"] is None
+    assert sig["avg_score"] is None
+
+
+def test_confidence_signal_high_level():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [{"source": "a.csv"}], scores=[0.85])
+    assert sig["confidence_level"] == "High"
+
+
+def test_confidence_signal_medium_level():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [{"source": "a.csv"}], scores=[0.65])
+    assert sig["confidence_level"] == "Medium"
+
+
+def test_confidence_signal_low_level():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [{"source": "a.csv"}], scores=[0.45])
+    assert sig["confidence_level"] == "Low"
+
+
+def test_confidence_signal_very_low_level_no_sources():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [])
+    assert sig["confidence_level"] == "Very Low"
+
+
+def test_confidence_signal_used_fallback_false_by_default():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [{"source": "a.csv"}])
+    assert sig["used_fallback"] is False
+
+
+def test_confidence_signal_used_fallback_propagated():
+    from rag.query import confidence_signal
+    sig = confidence_signal("Answer.", [], used_fallback=True)
+    assert sig["used_fallback"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -290,3 +388,67 @@ def test_ask_confidence_n_sources_matches_docs():
     result = ask(mock_chain, "Q?")
 
     assert result["confidence"]["n_sources"] == 3
+
+
+def test_ask_returns_scores_key():
+    """ask() returns a 'scores' list alongside sources."""
+    from rag.query import ask
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(scores=[0.9, 0.7])
+
+    result = ask(mock_chain, "Q?")
+
+    assert "scores" in result
+    assert result["scores"] == [0.9, 0.7]
+
+
+def test_ask_scores_populate_confidence_signal():
+    """Scores passed through chain result reach confidence_signal."""
+    from rag.query import ask
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(scores=[0.85])
+
+    result = ask(mock_chain, "Q?")
+
+    assert result["confidence"]["top_score"] == 0.85
+    assert result["confidence"]["confidence_level"] == "High"
+
+
+def test_ask_fallback_fires_on_abstain():
+    """When fallback_llm is provided and the answer is the abstain phrase, fallback is used."""
+    from rag.query import ask, ABSTAIN_PHRASE
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(answer=ABSTAIN_PHRASE, docs=[], scores=[])
+    mock_fallback = MagicMock()
+    mock_fallback.invoke.return_value = MagicMock(content="General knowledge answer.")
+
+    result = ask(mock_chain, "Q?", fallback_llm=mock_fallback)
+
+    assert ABSTAIN_PHRASE not in result["answer"]
+    assert "general knowledge" in result["answer"].lower()
+    assert result["confidence"]["used_fallback"] is True
+
+
+def test_ask_fallback_not_fired_without_fallback_llm():
+    """When no fallback_llm is given, abstain phrase stays in the answer."""
+    from rag.query import ask, ABSTAIN_PHRASE
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(answer=ABSTAIN_PHRASE, docs=[], scores=[])
+
+    result = ask(mock_chain, "Q?")
+
+    assert ABSTAIN_PHRASE in result["answer"]
+    assert result["confidence"]["used_fallback"] is False
+
+
+def test_ask_fallback_not_fired_for_good_answer():
+    """Fallback LLM is not called when the RAG answer does not contain the abstain phrase."""
+    from rag.query import ask
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = _mock_chain_result(answer="The rate is 2%.")
+    mock_fallback = MagicMock()
+
+    result = ask(mock_chain, "Q?", fallback_llm=mock_fallback)
+
+    mock_fallback.invoke.assert_not_called()
+    assert result["confidence"]["used_fallback"] is False
