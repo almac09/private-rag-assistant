@@ -23,6 +23,7 @@
 4. [Phase 4 — Feedback Loop](#4-phase-4--feedback-loop)
 5. [Legal and Ethical Considerations](#5-legal-and-ethical-considerations)
 6. [Conclusions](#6-conclusions)
+7. [Reflections](#7-reflections)
 - [Appendix I: Statement on Use of AI Tools (expanded)](#appendix-i-statement-on-use-of-ai-tools-expanded)
 
 ---
@@ -44,7 +45,7 @@ evaluates its own performance using RAGAS metrics. Nothing is sent to external s
 | Evaluation harness | `rag/evaluate.py` -- RAGAS metrics over 20-question test set |
 | Query logging | `rag/logger.py` -- JSONL log with failed-query flagging and replay |
 | Live demo app | `app.py` -- Streamlit app: baseline LLM vs RAG side-by-side |
-| Test suite | `tests/` -- 99 passing unit tests, all CI-safe |
+| Test suite | `tests/` -- 118 passing unit tests, all CI-safe |
 | Documentation | Sphinx HTML + Quarto site + Quarto RevealJS presentation |
 
 ---
@@ -128,10 +129,10 @@ signal and source metadata displayed beneath. Run with `uv run streamlit run app
 | File | Tests | What it covers |
 |------|-------|---------------|
 | `test_ingest.py` | 20 | CSV loading, chunking, ChromaDB embedding |
-| `test_query.py` | 21 | RAG chain construction, ask(), confidence_signal() |
+| `test_query.py` | 39 | RAG chain construction, ask(), confidence_signal(), score filtering, fallback |
 | `test_evaluate.py` | 15 | test_questions.json schema, load_test_questions(), save_results() |
 | `test_logger.py` | 18 | log_query(), is_failed_query(), load_log(), replay_failed() |
-| `test_app.py` | 20 | AppTest render/interaction, app structure, ask() integration |
+| `test_app.py` | 27 | AppTest render/interaction, app structure, modes, timing, fallback toggle |
 | `test_setup.py` | 9 | dependency imports, Ollama service (local only) |
 
 All tests that require Ollama or real data are marked `@ollama_required` or `@real_data` and
@@ -251,10 +252,119 @@ The project delivered:
 |-------|-------------|
 | [#44](https://github.com/almac09/private-rag-assistant/issues/44) | Run RAGAS evaluation and fill in §3.3 scores |
 | [#45](https://github.com/almac09/private-rag-assistant/issues/45) | Document chunk quality checks in §2.1 |
+| [#55](https://github.com/almac09/private-rag-assistant/issues/55) | LLM response latency — implement streaming output and num_predict cap |
 
 ---
 
-## Appendix I: Statement on Use of AI Tools (expanded)
+## 7 Reflections
+
+### 7.1 What I Learned About RAG Systems
+
+Building this system from scratch — rather than using a pre-packaged API — forced genuine understanding
+of each component. The key insight was that RAG is not one thing: it is a chain of four decisions, each
+with its own failure mode.
+
+**Retrieval quality determines answer quality.** No prompt engineering can compensate for retrieving the
+wrong chunks. The most instructive failure was discovering that LangChain's `as_retriever()` interface
+does not expose similarity scores — the pipeline was retrieving chunks but had no way to know how
+relevant they were. Switching to `similarity_search_with_relevance_scores()` and introducing a
+`score_threshold` parameter made relevance visible and filterable. This single change made the
+confidence signal meaningful.
+
+**The knowledge base choice matters more than the model.** The original plan used the course slide PDFs.
+The lecturer's advice to switch to the CBI speeches corpus turned out to be correct for a non-obvious
+reason: slides are written to accompany speech, not to stand alone. Extracted text from a slide deck
+like "Slide 14: Key risks — see previous slide" contains almost no retrievable information. Full-text
+speeches, by contrast, contain complete arguments and evidence. Garbage in, garbage out applies at the
+corpus level before a single embedding is computed.
+
+**Confidence scoring is harder than it sounds.** The heuristic confidence signal (High / Medium / Low /
+Very Low based on top similarity score) is useful but not honest. A model can return a confident-sounding
+answer that scores 0.9 on cosine similarity but is still wrong, because cosine similarity measures
+vector proximity, not factual accuracy. RAGAS faithfulness — which cross-checks the answer against the
+retrieved chunks — is the closer approximation to real quality. The heuristic is fast and useful for
+flagging edge cases; it is not a substitute for human evaluation.
+
+**Local LLMs are slow.** A 7B-parameter model on CPU takes 20–45 seconds per response. This is not a
+problem during development (tests are all mocked) but is very noticeable in the live demo. The practical
+fix is model selection (1B models respond in 2–5 seconds) or streaming output (tokens appear as they
+generate, so the wait feels shorter even if wall-clock time is unchanged). Issue
+[#55](https://github.com/almac09/private-rag-assistant/issues/55) tracks this.
+
+**The abstain phrase is the most important design decision in the prompt.** Grounding the model to the
+corpus with `"If the answer is not in the context, reply: '...'"` and then detecting that exact phrase
+downstream creates a single, testable control point. Every confidence check, fallback trigger, and
+query log failure flag depends on this one sentinel. If the phrase changes, everything downstream
+breaks — which is why it lives in one constant (`ABSTAIN_PHRASE`) imported everywhere rather than
+duplicated as a string literal.
+
+### 7.2 What I Learned About AI-Assisted Development
+
+This project had a second deliverable: using Claude Code as a junior developer under human direction,
+and documenting the experience for an AI tools appendix.
+
+**The discipline of the issue workflow was the most valuable constraint.** The requirement to create a
+GitHub issue before writing code, write tests before merging, and close with an attribution comment
+sounds bureaucratic. In practice it produced a searchable audit trail where every design decision can
+be reconstructed from the commit history. This is the kind of traceability a regulator or senior
+reviewer would ask for — and it would have been difficult to retrofit if left to the end.
+
+**AI assistance accelerates the mechanical parts and exposes the thinking parts.** Writing boilerplate
+tests, setting up Sphinx config, and drafting GitHub issue bodies took seconds. The parts that required
+human judgment — which knowledge base to use, how to structure the confidence signal, whether to add a
+feature or defer it — still took the same amount of thinking. The net effect was that more time was
+spent on design decisions and less on typing. For a solo project with a deadline, that is a meaningful
+shift.
+
+**Mocking is not as simple as it looks.** The most technically interesting debugging session in this
+project was discovering that LangChain's LCEL pipeline calls `llm(input)` rather than `llm.invoke(input)`
+when the model is not a `Runnable` subclass (it wraps the object in a `RunnableLambda`). This meant
+that `mock_llm.invoke.return_value` was never reached, and the mock returned a raw `MagicMock` object
+rather than an `AIMessage`. The fix (`mock_llm.return_value.return_value = AIMessage(...)`) required
+understanding the LangChain execution model, not just the test framework. No amount of prompt
+engineering finds that bug — reading the source does.
+
+**AI tools produce confident-sounding incorrect output.** A stale package name (`sphinxcontrib-docxbuilder`,
+which does not exist on PyPI) was added to `pyproject.toml` without error. A Windows-only em-dash
+character in a docstring caused a `SyntaxError` only on the Ubuntu CI runner. Both were caught by CI,
+not by review. The lesson: CI is not optional when AI writes code.
+
+### 7.3 What I Would Do Differently
+
+**Start evaluation earlier.** The RAGAS harness was built before the corpus was loaded, which is the
+right engineering order. But actually *running* the evaluation — generating real scores — was deferred.
+The result is that §3.3 of this report has placeholders rather than numbers. For a graded project, that
+is a gap. If I started again, I would run a small evaluation (5 questions, any reasonable model) in
+Phase 2 to establish a baseline, then improve it iteratively.
+
+**Choose the model first, then tune the rest.** The demo app was built assuming `llama3.2` (7B), then
+discovered to be unusably slow on the demo machine. Model selection should be the first experiment, not
+something discovered at the demo stage.
+
+**Chunk size deserves its own experiment.** `chunk_size=1000, chunk_overlap=100` was the default choice
+from LangChain examples. Whether that is the right setting for CBI speeches — which are long-form,
+argument-driven documents — was never tested. A short ablation (chunk sizes 500, 750, 1000, 1500 with
+fixed evaluation questions) would have produced a defensible choice rather than an inherited default.
+
+### 7.4 Connection to Professional Practice
+
+My day job involves constructing and communicating probabilistic models to regulators and boards who
+did not build them. The RAG system surfaces a parallel problem: *how do you know the answer is right,
+and how do you communicate your uncertainty?*
+
+The confidence signal — even as a heuristic — demonstrates that question explicitly. An answer labelled
+"High confidence · 4 chunks · 2 documents" communicates something different from "Very Low · 0 chunks
+retrieved". A model that only ever returns confident-sounding answers with no indication of retrieval
+quality is not suitable for professional use, regardless of how polished the interface looks.
+
+The same principle applies to actuarial models: a number without an indication of its uncertainty and
+the assumptions behind it is incomplete. The ABSTAIN_PHRASE, the fallback mechanism, and the confidence
+levels in this project are the RAG equivalent of confidence intervals and model limitations sections —
+not features added for the demo, but part of what it means for the system to be honest.
+
+---
+
+
 
 ### Tools used
 
