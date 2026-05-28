@@ -67,6 +67,8 @@ def _app_test_with_mocks(chain=None, llm=None) -> AppTest:
         patch("rag.query.load_vectorstore", return_value=mock_vs),
         patch("rag.query.build_rag_chain", return_value=chain),
         patch("langchain_ollama.ChatOllama", return_value=llm),
+        # Mock the model list so the sidebar selectbox renders without calling Ollama
+        patch("app._list_chat_models", return_value=["llama3.2:1b", "llama3:latest"]),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()
@@ -105,6 +107,11 @@ def test_app_calls_load_vectorstore():
 def test_app_uses_cache_resource():
     src = (ROOT / "app.py").read_text(encoding="utf-8")
     assert "cache_resource" in src
+
+
+def test_app_queries_ollama_for_model_list():
+    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "_list_chat_models" in src or "ollama.list" in src or "_ollama.list" in src
 
 
 def test_app_handles_uncertain_answers():
@@ -156,6 +163,7 @@ def test_app_shows_answers_after_question_submitted():
         patch("rag.query.load_vectorstore", return_value=mock_vs),
         patch("rag.query.build_rag_chain", return_value=chain),
         patch("langchain_ollama.ChatOllama", return_value=llm),
+        patch("app._list_chat_models", return_value=["llama3.2:1b"]),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()
@@ -182,6 +190,7 @@ def test_app_shows_error_gracefully_when_resources_fail():
     with (
         patch("rag.query.load_vectorstore", side_effect=ConnectionError("Ollama not running")),
         patch("langchain_ollama.ChatOllama", side_effect=ConnectionError("Ollama not running")),
+        patch("app._list_chat_models", return_value=["llama3.2:1b"]),
     ):
         at = AppTest.from_file(APP_PATH, default_timeout=30)
         at.run()

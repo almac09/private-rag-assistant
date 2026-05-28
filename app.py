@@ -4,10 +4,11 @@ Run with:
     streamlit run app.py
 
 Requires:
-    - ollama serve (llama3.2 and nomic-embed-text pulled)
+    - ollama serve (a chat model and nomic-embed-text pulled)
     - ChromaDB populated: python scripts/ollama_ready.py
 """
 
+import ollama as _ollama
 import streamlit as st
 from langchain_core.messages import HumanMessage
 from langchain_ollama import ChatOllama
@@ -20,8 +21,56 @@ st.set_page_config(
     layout="wide",
 )
 
+# ---------------------------------------------------------------------------
+# Sidebar — model selection
+# ---------------------------------------------------------------------------
+
+_EMBED_KEYWORDS = ("embed", "nomic", "mxbai", "bge", "e5")
+
+
+@st.cache_data(ttl=60)
+def _list_chat_models() -> list[str]:
+    """Return names of locally installed Ollama models that are likely chat models."""
+    try:
+        response = _ollama.list()
+        all_models = [m.model for m in response.models]
+        # Filter out embedding-only models by name convention
+        return [m for m in all_models if not any(kw in m.lower() for kw in _EMBED_KEYWORDS)]
+    except Exception:
+        return []
+
+
+with st.sidebar:
+    st.header("Settings")
+    available_models = _list_chat_models()
+
+    if available_models:
+        selected_model = st.selectbox(
+            "Ollama model",
+            available_models,
+            help="Both the baseline and RAG panel use this model.",
+        )
+    else:
+        selected_model = st.text_input(
+            "Ollama model",
+            value="llama3.2",
+            help="Could not query Ollama. Enter the model name manually.",
+        )
+
+    st.caption(f"Using: `{selected_model}`")
+    st.divider()
+    st.caption(
+        "**Corpus:** CBI Speeches  \n"
+        "**Embeddings:** nomic-embed-text  \n"
+        "**Vector store:** ChromaDB (local)"
+    )
+
+# ---------------------------------------------------------------------------
+# Page header
+# ---------------------------------------------------------------------------
+
 st.title("RAG Assistant — Live Demo")
-st.caption("CBI Speeches corpus · llama3.2 · nomic-embed-text · ChromaDB · LangChain")
+st.caption("CBI Speeches corpus · nomic-embed-text · ChromaDB · LangChain")
 
 st.markdown(
     """
@@ -33,28 +82,32 @@ Ask a question about Central Bank of Ireland speeches.
 
 st.divider()
 
+# ---------------------------------------------------------------------------
+# Resource loading (cached per model name)
+# ---------------------------------------------------------------------------
+
 
 @st.cache_resource(show_spinner="Loading RAG pipeline...")
-def _get_rag_chain():
+def _get_rag_chain(model: str):
     vs = load_vectorstore()
-    return build_rag_chain(vs)
+    return build_rag_chain(vs, model=model)
 
 
 @st.cache_resource(show_spinner="Connecting to Ollama...")
-def _get_baseline_llm():
-    return ChatOllama(model="llama3.2")
+def _get_baseline_llm(model: str):
+    return ChatOllama(model=model)
 
 
-def _load_resources():
+def _load_resources(model: str):
     try:
-        chain = _get_rag_chain()
-        llm = _get_baseline_llm()
+        chain = _get_rag_chain(model)
+        llm = _get_baseline_llm(model)
         return chain, llm, None
     except Exception as exc:
         return None, None, str(exc)
 
 
-chain, llm, load_error = _load_resources()
+chain, llm, load_error = _load_resources(selected_model)
 
 if load_error:
     st.error(
@@ -63,6 +116,10 @@ if load_error:
         "(`python scripts/ollama_ready.py`)."
     )
     st.stop()
+
+# ---------------------------------------------------------------------------
+# Question input and comparison panels
+# ---------------------------------------------------------------------------
 
 question = st.text_input(
     "Ask a question:",
