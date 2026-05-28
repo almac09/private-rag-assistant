@@ -248,11 +248,13 @@ The project delivered:
 
 **Open items (tracked as GitHub issues):**
 
-| Issue | Description |
-|-------|-------------|
-| [#44](https://github.com/almac09/private-rag-assistant/issues/44) | Run RAGAS evaluation and fill in §3.3 scores |
-| [#45](https://github.com/almac09/private-rag-assistant/issues/45) | Document chunk quality checks in §2.1 |
-| [#55](https://github.com/almac09/private-rag-assistant/issues/55) | LLM response latency — implement streaming output and num_predict cap |
+| Issue | Description | Priority |
+|-------|-------------|----------|
+| [#44](https://github.com/almac09/private-rag-assistant/issues/44) | Run RAGAS evaluation and fill in §3.3 scores | Must-do — §3.3 has placeholders |
+| [#55](https://github.com/almac09/private-rag-assistant/issues/55) | LLM response latency — implement streaming output and num_predict cap | Must-do — 20–45s response time is unusable in demo |
+| [#57](https://github.com/almac09/private-rag-assistant/issues/57) | Quarto site final polish — staleness review, update all pages for new features | Must-do — blocks submission |
+| [#45](https://github.com/almac09/private-rag-assistant/issues/45) | Document chunk quality checks in §2.1 | Nice-to-have |
+| [#52](https://github.com/almac09/private-rag-assistant/issues/52) | Retrieval quality improvements — hybrid search, reranking, query rewriting | Future work |
 
 ---
 
