@@ -43,7 +43,8 @@ evaluates its own performance using RAGAS metrics. Nothing is sent to external s
 | Query pipeline | `rag/query.py` -- retrieval chain + generation + confidence signal |
 | Evaluation harness | `rag/evaluate.py` -- RAGAS metrics over 20-question test set |
 | Query logging | `rag/logger.py` -- JSONL log with failed-query flagging and replay |
-| Test suite | `tests/` -- 79 passing unit tests, all CI-safe |
+| Live demo app | `app.py` -- Streamlit app: baseline LLM vs RAG side-by-side |
+| Test suite | `tests/` -- 99 passing unit tests, all CI-safe |
 | Documentation | Sphinx HTML + Quarto site + Quarto RevealJS presentation |
 
 ---
@@ -108,13 +109,21 @@ Nothing is sent to external APIs unless a fallback cloud provider is configured 
 The `scripts/ollama_ready.py` pre-flight script checks that Ollama is running, the required models are
 pulled, and the ChromaDB collection is populated before any query session begins.
 
+**Streamlit demo app** (`app.py`): A live interactive comparison tool built with Streamlit.
+Users type a question and see two answers side by side -- the raw LLM response (no retrieval)
+and the RAG pipeline response (retrieved from the CBI speeches corpus), with the confidence
+signal and source metadata displayed beneath. Run with `uv run streamlit run app.py`.
+
+- Issue [#43](https://github.com/almac09/private-rag-assistant/issues/43) -- Streamlit app
+- `quarto/demo_app.qmd` -- demo page with code walkthrough and comparison output
+
 ---
 
 ## 3 Evaluation
 
 ### 3.1 Test Suite
 
-79 unit tests across 5 test files, all passing in CI on Python 3.11 (Ubuntu):
+99 unit tests across 6 test files, all passing in CI on Python 3.11 (Ubuntu):
 
 | File | Tests | What it covers |
 |------|-------|---------------|
@@ -122,6 +131,7 @@ pulled, and the ChromaDB collection is populated before any query session begins
 | `test_query.py` | 21 | RAG chain construction, ask(), confidence_signal() |
 | `test_evaluate.py` | 15 | test_questions.json schema, load_test_questions(), save_results() |
 | `test_logger.py` | 18 | log_query(), is_failed_query(), load_log(), replay_failed() |
+| `test_app.py` | 20 | AppTest render/interaction, app structure, ask() integration |
 | `test_setup.py` | 9 | dependency imports, Ollama service (local only) |
 
 All tests that require Ollama or real data are marked `@ollama_required` or `@real_data` and
@@ -231,11 +241,16 @@ The project delivered:
 1. A working local RAG pipeline over the CBI speeches corpus
 2. A 20-question RAGAS evaluation harness, ready to run once corpus is loaded
 3. Phase 4 feedback-loop features (logging + confidence signal)
-4. A structured meta-AI governance workflow (see Appendix I)
-5. Full Sphinx HTML documentation and Quarto published site
+4. A Streamlit live demo app comparing baseline vs RAG side by side (`app.py`)
+5. A structured meta-AI governance workflow (see Appendix I)
+6. Full Sphinx HTML documentation and Quarto published site
 
-What remains: running the RAGAS evaluation with the real corpus loaded and filling in the scores
-in §3.3 above.
+**Open items (tracked as GitHub issues):**
+
+| Issue | Description |
+|-------|-------------|
+| [#44](https://github.com/almac09/private-rag-assistant/issues/44) | Run RAGAS evaluation and fill in §3.3 scores |
+| [#45](https://github.com/almac09/private-rag-assistant/issues/45) | Document chunk quality checks in §2.1 |
 
 ---
 

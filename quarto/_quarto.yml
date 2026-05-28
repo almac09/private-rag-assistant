@@ -17,6 +17,8 @@ website:
             text: Project Report
           - href: report.qmd
             text: Project Initiation Report
+          - href: demo_app.qmd
+            text: Live Demo App
           - href: evaluation.qmd
             text: Evaluation Results
           - href: presentation.qmd

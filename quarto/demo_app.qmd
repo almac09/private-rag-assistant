@@ -1,0 +1,162 @@
+---
+title: "Live Demo App"
+subtitle: "Baseline LLM vs RAG — side-by-side comparison"
+date: today
+date-format: "DD MMMM YYYY"
+number-sections: false
+---
+
+## What this page covers
+
+Issue [#43](https://github.com/almac09/private-rag-assistant/issues/43) adds `app.py`:
+a Streamlit web app that lets a user ask a question and instantly compare two answers:
+
+| Panel | What it does |
+|-------|-------------|
+| **Without RAG** | Sends the question directly to `llama3.2` with no retrieval context |
+| **With RAG** | Retrieves the top-4 chunks from the CBI speeches corpus via ChromaDB, injects them into the prompt, and generates a grounded answer |
+
+The goal is to make the difference between the two approaches visible and interactive —
+the kind of live demo that is harder to convey in a static report.
+
+---
+
+## How to run
+
+```powershell
+# 1. Start Ollama
+ollama serve
+
+# 2. Confirm corpus is loaded
+python scripts/ollama_ready.py
+
+# 3. Launch the app
+uv run streamlit run app.py
+```
+
+The app opens at `http://localhost:8501`.
+
+---
+
+## The comparison logic
+
+The core of the app is three calls: one to `ChatOllama` for the baseline, one to
+`ask()` for the RAG answer, and one read of the `confidence_signal` dict to
+surface how grounded the RAG answer is.
+
+```{python}
+#| code-fold: false
+from unittest.mock import MagicMock
+from rag.query import ask, confidence_signal, ABSTAIN_PHRASE
+
+# -- Synthetic setup (no Ollama required) -----------------------------------
+
+def _make_doc(content, source="cbi_speeches.csv", speaker="Governor Lane"):
+    doc = MagicMock()
+    doc.page_content = content
+    doc.metadata = {"source": source, "speaker": speaker, "date": "2023-06-12"}
+    return doc
+
+SYNTHETIC_DOCS = [
+    _make_doc("Inflation in the euro area fell to 2.9% in December 2023."),
+    _make_doc("The Governing Council raised rates by 25 basis points in July 2023."),
+    _make_doc("Price stability remains the primary mandate of the ECB."),
+    _make_doc("Core inflation, excluding energy and food, remained elevated."),
+]
+
+def _make_chain(answer, docs=SYNTHETIC_DOCS):
+    chain = MagicMock()
+    chain.invoke.return_value = {
+        "answer": answer,
+        "source_docs": docs,
+        "context": "",
+        "question": "",
+    }
+    return chain
+
+QUESTION = "What happened to inflation in the euro area in 2023?"
+
+# -- Baseline (no RAG) --- simulated raw LLM response
+BASELINE_ANSWER = (
+    "Inflation in the euro area declined significantly in 2023 from its 2022 peak, "
+    "driven by falling energy prices, though core inflation remained sticky. "
+    "The ECB raised interest rates several times during the year."
+)
+
+# -- RAG answer --- grounded in retrieved chunks
+RAG_ANSWER = "Inflation in the euro area fell to 2.9% in December 2023."
+rag_chain = _make_chain(RAG_ANSWER)
+rag_result = ask(rag_chain, QUESTION)
+
+print("QUESTION:", QUESTION)
+print()
+print("WITHOUT RAG (baseline LLM):")
+print(f"  {BASELINE_ANSWER}")
+print()
+print("WITH RAG:")
+print(f"  {rag_result['answer']}")
+```
+
+---
+
+## Confidence signal output
+
+The RAG panel also shows the confidence signal so the user knows how grounded
+the answer is.
+
+```{python}
+conf = rag_result["confidence"]
+print(f"is_uncertain    : {conf['is_uncertain']}")
+print(f"n_sources       : {conf['n_sources']}  chunks retrieved")
+print(f"has_sources     : {conf['has_sources']}")
+print(f"unique_documents: {conf['unique_documents']}")
+```
+
+---
+
+## Uncertain answer example
+
+When the model cannot find an answer in the corpus, `is_uncertain` flips to `True`
+and the app shows a warning rather than a confident-looking wrong answer.
+
+```{python}
+uncertain_chain = _make_chain(ABSTAIN_PHRASE, docs=[])
+uncertain_result = ask(uncertain_chain, "What is the capital of Mars?")
+conf_u = uncertain_result["confidence"]
+print(f"Answer      : {uncertain_result['answer']}")
+print(f"is_uncertain: {conf_u['is_uncertain']}")
+print(f"n_sources   : {conf_u['n_sources']}")
+```
+
+---
+
+## Retrieved sources display
+
+The app renders source metadata in an expandable panel.
+
+```{python}
+print(f"Retrieved {len(rag_result['sources'])} chunks:\n")
+for i, src in enumerate(rag_result["sources"], 1):
+    title = src.get("title") or src.get("source", "unknown")
+    speaker = src.get("speaker", "")
+    date = src.get("date", "")
+    meta = " · ".join(p for p in [speaker, date] if p)
+    print(f"  {i}. {title}")
+    if meta:
+        print(f"     {meta}")
+```
+
+---
+
+## What this shows
+
+The side-by-side format makes three things visible at once:
+
+1. **Hallucination risk** — the baseline LLM may produce plausible but unfounded claims;
+   the RAG answer is constrained to retrieved text.
+2. **Grounding** — the confidence signal and source panel show exactly which documents
+   the RAG answer came from, making the answer auditable.
+3. **Failure mode** — when the corpus does not contain a relevant answer, the RAG system
+   says so explicitly rather than guessing.
+
+This is the kind of live evidence a non-technical stakeholder can engage with directly.
