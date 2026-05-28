@@ -44,7 +44,7 @@ evaluates its own performance using RAGAS metrics. Nothing is sent to external s
 | Evaluation harness | `rag/evaluate.py` -- RAGAS metrics over 20-question test set |
 | Query logging | `rag/logger.py` -- JSONL log with failed-query flagging and replay |
 | Live demo app | `app.py` -- Streamlit app: baseline LLM vs RAG side-by-side |
-| Test suite | `tests/` -- 92 passing unit tests, all CI-safe |
+| Test suite | `tests/` -- 99 passing unit tests, all CI-safe |
 | Documentation | Sphinx HTML + Quarto site + Quarto RevealJS presentation |
 
 ---
@@ -123,7 +123,7 @@ signal and source metadata displayed beneath. Run with `uv run streamlit run app
 
 ### 3.1 Test Suite
 
-92 unit tests across 6 test files, all passing in CI on Python 3.11 (Ubuntu):
+99 unit tests across 6 test files, all passing in CI on Python 3.11 (Ubuntu):
 
 | File | Tests | What it covers |
 |------|-------|---------------|
@@ -131,7 +131,7 @@ signal and source metadata displayed beneath. Run with `uv run streamlit run app
 | `test_query.py` | 21 | RAG chain construction, ask(), confidence_signal() |
 | `test_evaluate.py` | 15 | test_questions.json schema, load_test_questions(), save_results() |
 | `test_logger.py` | 18 | log_query(), is_failed_query(), load_log(), replay_failed() |
-| `test_app.py` | 13 | app.py structure, ask() integration, confidence signal |
+| `test_app.py` | 20 | AppTest render/interaction, app structure, ask() integration |
 | `test_setup.py` | 9 | dependency imports, Ollama service (local only) |
 
 All tests that require Ollama or real data are marked `@ollama_required` or `@real_data` and
