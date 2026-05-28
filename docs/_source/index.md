@@ -13,6 +13,13 @@ It covers the capstone project report, API reference, and evaluation results.
 :maxdepth: 2
 :caption: Project Report
 
+output_report
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Project Initiation Report
+
 report
 ```
 

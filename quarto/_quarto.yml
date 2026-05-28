@@ -13,8 +13,10 @@ website:
         text: Home
       - section: "Project"
         contents:
-          - href: report.qmd
+          - href: output_report.qmd
             text: Project Report
+          - href: report.qmd
+            text: Project Initiation Report
           - href: evaluation.qmd
             text: Evaluation Results
           - href: presentation.qmd
